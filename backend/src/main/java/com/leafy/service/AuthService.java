@@ -43,10 +43,10 @@ public class AuthService {
 
     public TokenResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.LOGIN_FAILED));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+            throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
 
         String role = user.getRoles().iterator().next().name();

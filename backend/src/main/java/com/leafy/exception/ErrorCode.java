@@ -16,6 +16,7 @@ public enum ErrorCode {
     // Auth
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "A001", "인증되지 않은 사용자입니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "A002", "접근 권한이 없습니다."),
+    LOGIN_FAILED(HttpStatus.BAD_REQUEST, "A003", "이메일 또는 비밀번호가 일치하지 않습니다."),
     
     // Domain
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "사용자를 찾을 수 없습니다."),
