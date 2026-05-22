@@ -39,6 +39,7 @@ Leafy의 데이터 모델은 사용자(User)를 중심으로 일기(Journal), �
 | advice_tone | VARCHAR(50) | Yes | AI 조언 말투 (DIRECT, FRIENDLY, EMPATHETIC) |
 | music_style | VARCHAR(100) | Yes | 선호하는 음악 장르 |
 | persona_style | VARCHAR(50) | Yes | 에이전트 페르소나 스타일 (BASIC, FRIENDLY) |
+| is_ai_analysis_enabled | BOOLEAN | No | AI 분석 활성화 여부 (Default: True) |
 
 ---
 
@@ -99,6 +100,33 @@ Leafy의 데이터 모델은 사용자(User)를 중심으로 일기(Journal), �
 | due_date | DATETIME | Yes | 완료 예정 기한 |
 | completed_at | DATETIME | Yes | 실제 완료 일시 |
 | created_at | DATETIME | No | 생성 일시 |
+
+---
+
+### 2.7 Items (아이템 정보)
+상점에서 판매하거나 사용자가 장착할 수 있는 아이템 정보를 관리합니다.
+
+| Column | Type | Nullable | Comment |
+| :--- | :--- | :--- | :--- |
+| item_id | BIGINT (PK) | No | 아이템 고유 식별자 |
+| item_type | VARCHAR(20) | No | 아이템 타입 (AVATAR, BACKGROUND 등) |
+| item_name | VARCHAR(100) | No | 아이템 이름 |
+| price | INTEGER | No | 아이템 가격 |
+| resource_url | VARCHAR(512) | Yes | 아이템 이미지/리소스 URL |
+| created_at | DATETIME | No | 생성 일시 |
+
+---
+
+### 2.8 User Items (사용자 보유 아이템)
+사용자가 구매하거나 보유한 아이템 목록과 장착 여부를 관리합니다.
+
+| Column | Type | Nullable | Comment |
+| :--- | :--- | :--- | :--- |
+| user_item_id | BIGINT (PK) | No | 보유 정보 고유 식별자 |
+| user_id | BIGINT (FK) | No | Users 테이블 참조 |
+| item_id | BIGINT (FK) | No | Items 테이블 참조 |
+| is_equipped | BOOLEAN | No | 장착 여부 |
+| purchased_at | DATETIME | No | 구매 일시 |
 
 ---
 

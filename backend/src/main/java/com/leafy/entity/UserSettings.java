@@ -57,9 +57,14 @@ public class UserSettings {
     @Column(name = "persona_style")
     private PersonaStyle personaStyle; // 기존 필드 유지
 
+    @Column(name = "is_ai_analysis_enabled", nullable = false)
+    @Builder.Default
+    private boolean isAiAnalysisEnabled = true; // AI 분석 활성화 여부
+
     public void update(LocalTime diaryTime, LocalTime wakeUpTime, UsagePurpose usagePurpose, 
                        String nickname, String profileImage, LocalDate birthDate, 
-                       AdviceTone adviceTone, String musicStyle, PersonaStyle personaStyle) {
+                       AdviceTone adviceTone, String musicStyle, PersonaStyle personaStyle,
+                       Boolean isAiAnalysisEnabled) {
         this.diaryTime = diaryTime;
         this.wakeUpTime = wakeUpTime;
         this.usagePurpose = usagePurpose;
@@ -69,5 +74,12 @@ public class UserSettings {
         this.adviceTone = adviceTone;
         this.musicStyle = musicStyle;
         this.personaStyle = personaStyle;
+        if (isAiAnalysisEnabled != null) {
+            this.isAiAnalysisEnabled = isAiAnalysisEnabled;
+        }
+    }
+
+    public void updateAiAnalysis(boolean isAiAnalysisEnabled) {
+        this.isAiAnalysisEnabled = isAiAnalysisEnabled;
     }
 }

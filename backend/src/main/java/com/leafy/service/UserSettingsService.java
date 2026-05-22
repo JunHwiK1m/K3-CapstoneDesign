@@ -35,6 +35,12 @@ public class UserSettingsService {
         UserSettings settings = userSettingsRepository.findByUserId(user.getId())
                 .orElseGet(() -> createDefaultSettings(user));
 
+        // 여러 장르 리스트를 콤마로 구분된 하나의 문자열로 합침
+        String musicStyleString = null;
+        if (request.musicStyles() != null && !request.musicStyles().isEmpty()) {
+            musicStyleString = String.join(",", request.musicStyles());
+        }
+
         settings.update(
                 request.diaryTime(),
                 request.wakeUpTime(),
@@ -43,9 +49,18 @@ public class UserSettingsService {
                 request.profileImage(),
                 request.birthDate(),
                 request.adviceTone(),
-                request.musicStyle(),
-                request.personaStyle()
+                musicStyleString,
+                request.personaStyle(),
+                request.isAiAnalysisEnabled()
         );
+    }
+
+    @Transactional
+    public void updateAiAnalysisSetting(String email, boolean enabled) {
+        User user = findUserByEmail(email);
+        UserSettings settings = userSettingsRepository.findByUserId(user.getId())
+                .orElseGet(() -> createDefaultSettings(user));
+        settings.updateAiAnalysis(enabled);
     }
 
     private User findUserByEmail(String email) {

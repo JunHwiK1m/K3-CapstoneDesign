@@ -3,6 +3,7 @@ package com.leafy.controller;
 import com.leafy.common.CommonResponse;
 import com.leafy.dto.todo.TodoRequest;
 import com.leafy.dto.todo.TodoResponse;
+import com.leafy.dto.todo.TodoStatsResponse;
 import com.leafy.security.JwtTokenProvider;
 import com.leafy.service.TodoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +44,13 @@ public class TodoController {
     public CommonResponse<List<TodoResponse>> getMyTodos(Authentication authentication) {
         Long userId = getUserId(authentication);
         return CommonResponse.success(todoService.getMyTodos(userId));
+    }
+
+    @Operation(summary = "할 일 달성률 조회", description = "사용자의 전체 할 일 대비 완료된 할 일의 비율을 조회합니다.")
+    @GetMapping("/stats")
+    public CommonResponse<TodoStatsResponse> getTodoStats(Authentication authentication) {
+        Long userId = getUserId(authentication);
+        return CommonResponse.success("달성률 조회 성공", todoService.getTodoStats(userId));
     }
 
     @Operation(summary = "할 일 수정", description = "태스크명 또는 마감 기한을 수정합니다.")

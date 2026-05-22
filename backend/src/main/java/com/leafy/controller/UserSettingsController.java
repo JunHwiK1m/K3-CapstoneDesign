@@ -11,8 +11,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "User Settings", description = "사용자 설정 관련 API")
@@ -36,5 +38,14 @@ public class UserSettingsController {
             @RequestBody UserSettingsUpdateRequest request) {
         userSettingsService.updateSettings(userDetails.getUsername(), request);
         return CommonResponse.success("사용자 설정 수정 성공", null);
+    }
+
+    @Operation(summary = "AI 분석 활성화 설정 수정", description = "AI가 일기를 분석할지 여부를 설정합니다.")
+    @PutMapping("/ai-analysis")
+    public CommonResponse<Void> updateAiAnalysis(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam boolean enabled) {
+        userSettingsService.updateAiAnalysisSetting(userDetails.getUsername(), enabled);
+        return CommonResponse.success("AI 분석 설정 수정 성공", null);
     }
 }

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -62,6 +63,7 @@ class UserSettingsServiceTest {
         // Given
         LocalTime diaryTime = LocalTime.of(10, 30);
         LocalDate birthDate = LocalDate.of(1990, 5, 20);
+        List<String> musicStyles = List.of("Lo-fi", "Jazz");
         
         UserSettingsUpdateRequest request = new UserSettingsUpdateRequest(
                 diaryTime,
@@ -71,8 +73,9 @@ class UserSettingsServiceTest {
                 "https://example.com/profile.png",
                 birthDate,
                 null,
-                "Lo-fi",
-                PersonaStyle.FRIENDLY
+                musicStyles,
+                PersonaStyle.FRIENDLY,
+                true
         );
 
         // When
@@ -84,5 +87,7 @@ class UserSettingsServiceTest {
         assertThat(response.usagePurpose()).isEqualTo(UsagePurpose.GOD_SAENG);
         assertThat(response.personaStyle()).isEqualTo(PersonaStyle.FRIENDLY);
         assertThat(response.birthDate()).isEqualTo(birthDate);
+        assertThat(response.musicStyles()).containsExactlyInAnyOrder("Lo-fi", "Jazz");
+        assertThat(response.isAiAnalysisEnabled()).isTrue();
     }
 }

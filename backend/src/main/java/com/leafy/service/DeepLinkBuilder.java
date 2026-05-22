@@ -15,8 +15,8 @@ public class DeepLinkBuilder {
     public DeepLinkPair build(RecommendationCategory category, String rawId) {
         return switch (category) {
             case MUSIC -> DeepLinkPair.of(
-                    "spotify:track:" + rawId,
-                    "https://open.spotify.com/track/" + rawId
+                    "spotify:playlist:" + rawId,
+                    "https://open.spotify.com/playlist/" + rawId
             );
             case FOOD -> DeepLinkPair.of(
                     "baemin://restaurant?id=" + rawId, // 예시 스킴

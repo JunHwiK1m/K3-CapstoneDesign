@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Schema(description = "사용자 설정 수정 요청")
 public record UserSettingsUpdateRequest(
@@ -31,9 +32,12 @@ public record UserSettingsUpdateRequest(
     @Schema(description = "AI 조언 말투", example = "FRIENDLY")
     AdviceTone adviceTone,
 
-    @Schema(description = "선호하는 음악 종류", example = "Lo-fi")
-    String musicStyle,
+    @Schema(description = "선호하는 음악 종류 (여러 개 선택 가능)", example = "[\"Lo-fi\", \"Jazz\"]")
+    List<String> musicStyles,
 
     @Schema(description = "페르소나 스타일", example = "BASIC")
-    PersonaStyle personaStyle
+    PersonaStyle personaStyle,
+
+    @Schema(description = "AI 분석 활성화 여부", example = "true")
+    Boolean isAiAnalysisEnabled
 ) {}

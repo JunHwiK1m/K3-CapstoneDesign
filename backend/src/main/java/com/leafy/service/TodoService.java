@@ -2,6 +2,7 @@ package com.leafy.service;
 
 import com.leafy.dto.todo.TodoRequest;
 import com.leafy.dto.todo.TodoResponse;
+import com.leafy.dto.todo.TodoStatsResponse;
 import com.leafy.entity.Todo;
 import com.leafy.entity.User;
 import com.leafy.exception.BusinessException;
@@ -41,6 +42,13 @@ public class TodoService {
         return todoRepository.findAllByUserIdOrderByDueDateAsc(userId).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    public TodoStatsResponse getTodoStats(Long userId) {
+        List<Todo> todos = todoRepository.findAllByUserIdOrderByDueDateAsc(userId);
+        long totalCount = todos.size();
+        long completedCount = todos.stream().filter(Todo::isCompleted).count();
+        return TodoStatsResponse.of(totalCount, completedCount);
     }
 
     @Transactional

@@ -9,6 +9,10 @@ import lombok.Builder;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Builder
 @Schema(description = "사용자 설정 조회 응답")
@@ -34,11 +38,14 @@ public record UserSettingsResponse(
     @Schema(description = "AI 조언 말투", example = "FRIENDLY")
     AdviceTone adviceTone,
 
-    @Schema(description = "선호하는 음악 종류", example = "Lo-fi")
-    String musicStyle,
+    @Schema(description = "선호하는 음악 종류 리스트", example = "[\"Lo-fi\", \"Jazz\"]")
+    List<String> musicStyles,
 
     @Schema(description = "페르소나 스타일", example = "BASIC")
     PersonaStyle personaStyle,
+
+    @Schema(description = "AI 분석 활성화 여부", example = "true")
+    boolean isAiAnalysisEnabled,
 
     @Schema(description = "설정 완료 여부", example = "true")
     boolean isConfigured
@@ -48,10 +55,16 @@ public record UserSettingsResponse(
             return null;
         }
         
-        // 필수 값(일기 시간, 생년월일, 닉네임)이 존재하면 설정 완료로 판단
         boolean configured = settings.getDiaryTime() != null && 
                              settings.getBirthDate() != null && 
                              settings.getNickname() != null;
+
+        List<String> musicStyles = Collections.emptyList();
+        if (settings.getMusicStyle() != null && !settings.getMusicStyle().isBlank()) {
+            musicStyles = Arrays.stream(settings.getMusicStyle().split(","))
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+        }
 
         return UserSettingsResponse.builder()
                 .diaryTime(settings.getDiaryTime())
@@ -61,8 +74,9 @@ public record UserSettingsResponse(
                 .profileImage(settings.getProfileImage())
                 .birthDate(settings.getBirthDate())
                 .adviceTone(settings.getAdviceTone())
-                .musicStyle(settings.getMusicStyle())
+                .musicStyles(musicStyles)
                 .personaStyle(settings.getPersonaStyle())
+                .isAiAnalysisEnabled(settings.isAiAnalysisEnabled())
                 .isConfigured(configured)
                 .build();
     }

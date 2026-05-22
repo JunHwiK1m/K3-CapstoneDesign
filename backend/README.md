@@ -62,33 +62,59 @@ DEV_AI_SERVER_URL=http://localhost:8000
 
 ## 📑 주요 API 명세
 
-전체 API 명세는 서버 실행 후 `http://localhost:8080/swagger-ui.html`에서 확인 가능합니다.
+### 1. 응답 공통 규격
+모든 API 응답은 아래의 공통 형식을 따릅니다.
+```json
+{
+  "status": "SUCCESS",
+  "message": "요청이 성공적으로 처리되었습니다.",
+  "data": { ... } // 실제 반환 데이터
+}
+```
 
-### 1. 인증 (Authentication)
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| POST | `/api/auth/signup` | 이메일 기반 회원가입 |
-| POST | `/api/auth/login` | 이메일 기반 로그인 (JWT 발급) |
+### 2. 인증 (Authentication)
+| Method | Endpoint | Description | Response Data Example |
+| :--- | :--- | :--- | :--- |
+| POST | `/api/auth/signup` | 이메일 회원가입 | `1` (생성된 user_id) |
+| POST | `/api/auth/login` | 일반 로그인 | `{"accessToken": "eyJ...", "email": "user@test.com"}` |
+| GET | `/login-success` | 소셜 로그인 성공 (Redirect) | `{"token": "eyJ...", "message": "OAuth2 login successful"}` |
 
-### 2. 일기 (Journal)
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| POST | `/api/journals` | 일기 작성 (AI 분석 비동기 요청 포함) |
-| GET | `/api/journals` | 사용자의 일기 목록 조회 |
+### 3. 일기 (Journal)
+| Method | Endpoint | Description | Response Data Example |
+| :--- | :--- | :--- | :--- |
+| POST | `/api/journals` | 일기 작성 (AI 분석 시작) | `10` (생성된 journal_id) |
+| GET | `/api/journals` | 내 일기 목록 조회 | `[{"id": 10, "content": "오늘 하루...", "analysisStatus": "COMPLETED", "createdAt": "2026-05-14T..."}]` |
+| GET | `/api/journals/{id}`| 일기 상세 조회 | `{"id": 10, "content": "전체 본문...", "analysisStatus": "COMPLETED", ...}` |
 
-### 3. 사용자 설정 (User Settings)
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| GET | `/api/users/settings` | 현재 사용자의 리마인더 시간, 페르소나 등 조회 |
-| PATCH | `/api/users/settings` | 사용자 설정값 수정 |
+### 4. 사용자 설정 (User Settings)
+| Method | Endpoint | Description | Response Data Example |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/users/settings` | 설정 조회 | `{"diaryTime": "21:00", "usagePurpose": "MENTAL_CARE", "nickname": "리피", "isConfigured": true}` |
+| PATCH | `/api/users/settings` | 설정 수정 | `null` |
+| PUT | `/api/users/settings/ai-analysis` | AI 분석 활성화 토글 | `null` (Query Param: `enabled=true/false`) |
 
-### 4. 추천 및 할 일 (Recommendation & Todo)
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| GET | `/api/recommendations` | 감정 분석 기반 맞춤형 추천 목록 조회 |
-| PATCH | `/api/recommendations/{id}/click` | 추천 항목 클릭 상태 업데이트 |
-| GET | `/api/todos` | AI가 추천한 할 일 목록 조회 |
-| PUT | `/api/todos/{id}` | 할 일 상태 수정 및 완료 처리 |
+### 5. 추천 (Recommendation)
+| Method | Endpoint | Description | Response Data Example |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/recommendations` | 일기별 맞춤 추천 조회 | `[{"id": 1, "category": "MUSIC", "contentText": "위로가 되는 곡", "externalLink": "..."}]` |
+| PATCH | `/api/recommendations/{id}/click` | 추천 클릭 상태 업데이트 | `null` |
+
+### 6. 할 일 (Todo)
+| Method | Endpoint | Description | Response Data Example |
+| :--- | :--- | :--- | :--- |
+| POST | `/api/todos` | 할 일 생성 | `5` (생성된 todo_id) |
+| GET | `/api/todos` | 내 할 일 목록 조회 | `[{"id": 5, "taskName": "명상하기", "isCompleted": false}]` |
+| GET | `/api/todos/stats` | 할 일 달성률 조회 | `{"totalCount": 10, "completedCount": 8, "completionRate": 0.8}` |
+| PUT | `/api/todos/{id}` | 할 일 수정 | `null` |
+| PATCH | `/api/todos/{id}/complete` | 할 일 완료 처리 | `null` |
+| DELETE | `/api/todos/{id}` | 할 일 삭제 | `null` |
+
+### 7. 상점 및 아이템 (Store & Item)
+| Method | Endpoint | Description | Response Data Example |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/items` | 전체 아이템 목록 조회 | `[{"id": 1, "name": "새싹 테두리", "price": 100, "itemType": "FRAME"}]` |
+| POST | `/api/items/{id}/purchase` | 아이템 구매 | `null` |
+| PATCH | `/api/items/user-items/{id}/equip` | 아이템 장착 | `null` |
 
 ---
 
