@@ -35,6 +35,9 @@ class _SetupScreenState extends State<SetupScreen> {
     '기타': false,
   };
 
+  // 9. AI 일기 분석 동의 여부
+  bool _agreedToAIAnalysis = true;
+
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -373,6 +376,38 @@ class _SetupScreenState extends State<SetupScreen> {
                   checkmarkColor: Theme.of(context).colorScheme.primary,
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 32),
+
+            // 9. AI 분석 동의 여부
+            Text('데이터 활용 동의', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+              ),
+              child: CheckboxListTile(
+                title: Text(
+                  'AI 일기 분석 및 맞춤 추천 서비스 동의',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                subtitle: Text(
+                  '작성하신 일기 내용을 바탕으로 감정 분석 및 콘텐츠 추천을 제공합니다. 거부하셔도 기본 일기장 기능은 사용하실 수 있습니다.',
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary.withOpacity(0.6)),
+                ),
+                value: _agreedToAIAnalysis,
+                onChanged: (bool? value) {
+                  setState(() {
+                    _agreedToAIAnalysis = value ?? false;
+                  });
+                },
+                activeColor: Theme.of(context).colorScheme.primary,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
             ),
             const SizedBox(height: 48),
 
