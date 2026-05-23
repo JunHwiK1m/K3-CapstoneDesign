@@ -80,9 +80,8 @@ class AnalysisResultScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildEmotionStat(context, '지침', '75%', Icons.battery_alert),
-                  _buildEmotionStat(context, '우울', '60%', Icons.cloud),
-                  _buildEmotionStat(context, '스트레스', '80%', Icons.bolt),
+                  _buildEmotionStat(context, '기쁨', '20%', Icons.sentiment_very_satisfied),
+                  _buildEmotionStat(context, '슬픔', '60%', Icons.sentiment_dissatisfied),
                 ],
               ),
             ),
@@ -94,27 +93,72 @@ class AnalysisResultScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildRecommendationCard(
-              context: context,
-              icon: Icons.music_note,
-              title: 'Spotify (스포티파이)',
-              description: '마음을 편안하게 해주는 잔잔한 어쿠스틱 플레이리스트',
-              color: Colors.green,
+            
+            // Spotify 자동 재생 UI
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.music_note, color: Colors.white),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Spotify (스포티파이)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '마음을 편안하게 해주는 플레이리스트\n(자동 재생 중...)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.graphic_eq, color: Colors.green),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
-            _buildRecommendationCard(
+            
+            // Netflix 바로가기 및 검색
+            _buildActionableRecommendationCard(
               context: context,
               icon: Icons.movie_filter,
               title: 'Netflix (넷플릭스)',
               description: '가볍게 웃고 넘길 수 있는 힐링 시트콤 모음',
+              buttonText: '앱 열기 및 검색',
               color: Colors.redAccent,
             ),
             const SizedBox(height: 12),
-            _buildRecommendationCard(
+            
+            // 배달 앱 바로가기 및 검색
+            _buildActionableRecommendationCard(
               context: context,
               icon: Icons.fastfood,
               title: '배달 앱',
               description: '스트레스가 싹 풀리는 달콤한 마카롱과 디저트',
+              buttonText: '앱 열기 및 검색',
               color: Colors.orange,
             ),
             const SizedBox(height: 40),
@@ -168,14 +212,16 @@ class AnalysisResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecommendationCard({
+  Widget _buildActionableRecommendationCard({
     required BuildContext context,
     required IconData icon,
     required String title,
     required String description,
+    required String buttonText,
     required Color color,
   }) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(16),
@@ -188,47 +234,70 @@ class AnalysisResultScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4.0),
-          child: Text(
-            description,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                // Placeholder for actual app linking and search feature
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$title 앱으로 이동하여 검색합니다 (기능 준비 중)'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.open_in_new, size: 16),
+              label: Text(buttonText),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color.withOpacity(0.1),
+                foregroundColor: color,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ),
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-        ),
-        onTap: () {
-          // Placeholder for actual link feature
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('$title(으)로 이동합니다 (기능 준비 중)'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
+        ],
       ),
     );
   }

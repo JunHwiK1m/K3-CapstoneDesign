@@ -11,18 +11,32 @@ class SetupScreen extends StatefulWidget {
 class _SetupScreenState extends State<SetupScreen> {
   final TextEditingController _nicknameController = TextEditingController();
   DateTime? _selectedDate;
+  TimeOfDay? _wakeUpTime;
+  TimeOfDay? _diaryTime;
   
-  // App usage purposes
-  final Map<String, bool> _usagePurposes = {
-    '감정 기록 및 회고': false,
-    '일정 및 목표 관리': false,
-    '단순 일기 작성': false,
-    'AI와의 대화': false,
+  // 6. 일기 작성 용도 (택 1)
+  String _selectedPurpose = '기록용';
+  final List<String> _purposes = ['기록용', '계획용', '멘탈관리용', '갓생용', '기타'];
+
+  // 7. 조언 말투 설정 (택 1)
+  String _selectedTone = '친근한';
+  final List<String> _tones = ['직설적', '친근한', '공감적', '기타'];
+
+  // 8. 좋아하는 노래 스타일 (다중 선택)
+  final Map<String, bool> _musicStyles = {
+    '발라드': false,
+    '팝': false,
+    '힙합': false,
+    'R&B': false,
+    '클래식': false,
+    '재즈': false,
+    '인디': false,
+    'K-Pop': false,
+    '기타': false,
   };
 
-  // Agent tone
-  String _selectedTone = '친근한'; // 직설적, 친근한, 공감적
-  final List<String> _tones = ['직설적', '친근한', '공감적'];
+  // 9. AI 일기 분석 동의 여부
+  bool _agreedToAIAnalysis = true;
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -50,6 +64,34 @@ class _SetupScreenState extends State<SetupScreen> {
     }
   }
 
+  Future<void> _selectTime(BuildContext context, bool isWakeUp) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).colorScheme.primary,
+              onPrimary: Theme.of(context).colorScheme.surface,
+              onSurface: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        if (isWakeUp) {
+          _wakeUpTime = picked;
+        } else {
+          _diaryTime = picked;
+        }
+      });
+    }
+  }
+
   @override
   void dispose() {
     _nicknameController.dispose();
@@ -73,7 +115,41 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             const SizedBox(height: 32),
             
-            // Nickname
+            // 1. 프로필 이미지
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    child: Icon(
+                      Icons.person,
+                      size: 50,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                        onPressed: () {
+                          // TODO: 이미지 선택 기능 구현
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // 2. 닉네임
             Text('닉네임', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             TextField(
@@ -99,7 +175,7 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Date of Birth
+            // 3. 생년월일
             Text('생년월일', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             InkWell(
@@ -136,8 +212,82 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             const SizedBox(height: 32),
 
-            // App usage purpose
-            Text('다이어리 사용 목적 (다중 선택 가능)', style: Theme.of(context).textTheme.titleMedium),
+            // 4. 평균 기상 시간
+            Text('평균 기상 시간', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => _selectTime(context, true),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _wakeUpTime == null
+                          ? '기상 시간을 선택해주세요'
+                          : _wakeUpTime!.format(context),
+                      style: TextStyle(
+                        color: _wakeUpTime == null 
+                            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                            : Theme.of(context).colorScheme.primary,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Icon(
+                      Icons.access_time_rounded,
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // 5. 일기 작성 시간
+            Text('일기 작성 시간', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => _selectTime(context, false),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _diaryTime == null
+                          ? '일기 작성 시간을 선택해주세요'
+                          : _diaryTime!.format(context),
+                      style: TextStyle(
+                        color: _diaryTime == null 
+                            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                            : Theme.of(context).colorScheme.primary,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Icon(
+                      Icons.access_time_rounded,
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // 6. 일기 작성 용도
+            Text('일기 작성 용도 (택 1)', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
@@ -146,15 +296,15 @@ class _SetupScreenState extends State<SetupScreen> {
                 border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
               ),
               child: Column(
-                children: _usagePurposes.keys.map((String key) {
-                  return CheckboxListTile(
-                    title: Text(key),
-                    value: _usagePurposes[key],
+                children: _purposes.map((String purpose) {
+                  return RadioListTile<String>(
+                    title: Text(purpose),
+                    value: purpose,
+                    groupValue: _selectedPurpose,
                     activeColor: Theme.of(context).colorScheme.primary,
-                    checkColor: Theme.of(context).colorScheme.surface,
-                    onChanged: (bool? value) {
+                    onChanged: (String? value) {
                       setState(() {
-                        _usagePurposes[key] = value!;
+                        _selectedPurpose = value!;
                       });
                     },
                   );
@@ -163,8 +313,8 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             const SizedBox(height: 32),
 
-            // Agent tone
-            Text('AI 에이전트의 말투', style: Theme.of(context).textTheme.titleMedium),
+            // 7. 조언 말투 설정
+            Text('AI 에이전트의 말투 (택 1)', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
@@ -186,6 +336,77 @@ class _SetupScreenState extends State<SetupScreen> {
                     },
                   );
                 }).toList(),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // 8. 좋아하는 노래 스타일
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('좋아하는 음악 장르 (다중 선택)', style: Theme.of(context).textTheme.titleMedium),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      bool allSelected = _musicStyles.values.every((element) => element);
+                      _musicStyles.updateAll((key, value) => !allSelected);
+                    });
+                  },
+                  child: Text(
+                    _musicStyles.values.every((element) => element) ? '모두 해제' : '모두 선택',
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: _musicStyles.keys.map((String key) {
+                return FilterChip(
+                  label: Text(key),
+                  selected: _musicStyles[key]!,
+                  onSelected: (bool value) {
+                    setState(() {
+                      _musicStyles[key] = value;
+                    });
+                  },
+                  selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  checkmarkColor: Theme.of(context).colorScheme.primary,
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 32),
+
+            // 9. AI 분석 동의 여부
+            Text('데이터 활용 동의', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+              ),
+              child: CheckboxListTile(
+                title: Text(
+                  'AI 일기 분석 및 맞춤 추천 서비스 동의',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                subtitle: Text(
+                  '작성하신 일기 내용을 바탕으로 감정 분석 및 콘텐츠 추천을 제공합니다. 거부하셔도 기본 일기장 기능은 사용하실 수 있습니다.',
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary.withOpacity(0.6)),
+                ),
+                value: _agreedToAIAnalysis,
+                onChanged: (bool? value) {
+                  setState(() {
+                    _agreedToAIAnalysis = value ?? false;
+                  });
+                },
+                activeColor: Theme.of(context).colorScheme.primary,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                controlAffinity: ListTileControlAffinity.leading,
               ),
             ),
             const SizedBox(height: 48),
