@@ -20,7 +20,10 @@ public class TodoStatsResponse {
     @Schema(description = "완료율 (0.00 ~ 1.00)", example = "0.8000")
     private BigDecimal completionRate;
 
-    public static TodoStatsResponse of(long total, long completed) {
+    @Schema(description = "AI 성취도 피드백 메시지")
+    private String feedbackMessage;
+
+    public static TodoStatsResponse of(long total, long completed, String feedbackMessage) {
         BigDecimal rate = total == 0 ? BigDecimal.ZERO : 
             BigDecimal.valueOf(completed).divide(BigDecimal.valueOf(total), 4, java.math.RoundingMode.HALF_UP);
             
@@ -28,6 +31,7 @@ public class TodoStatsResponse {
                 .totalCount(total)
                 .completedCount(completed)
                 .completionRate(rate)
+                .feedbackMessage(feedbackMessage)
                 .build();
     }
 }

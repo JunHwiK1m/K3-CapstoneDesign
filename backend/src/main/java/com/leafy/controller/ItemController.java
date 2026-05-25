@@ -1,6 +1,7 @@
 package com.leafy.controller;
 
 import com.leafy.common.CommonResponse;
+import com.leafy.dto.item.UserItemResponse;
 import com.leafy.entity.Item;
 import com.leafy.security.JwtTokenProvider;
 import com.leafy.service.ItemService;
@@ -30,6 +31,13 @@ public class ItemController {
     @GetMapping
     public CommonResponse<List<Item>> getAllItems() {
         return CommonResponse.success(itemService.getAllItems());
+    }
+
+    @Operation(summary = "내 아이템 목록 조회", description = "내가 소유한 모든 아이템 목록을 조회합니다.")
+    @GetMapping("/my")
+    public CommonResponse<List<UserItemResponse>> getMyItems(Authentication authentication) {
+        Long userId = getUserId(authentication);
+        return CommonResponse.success(itemService.getUserItems(userId));
     }
 
     @Operation(summary = "아이템 구매", description = "특정 아이템을 구매하여 내 인벤토리에 추가합니다.")

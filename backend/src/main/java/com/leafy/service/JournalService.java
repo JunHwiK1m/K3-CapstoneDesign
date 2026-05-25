@@ -2,10 +2,12 @@ package com.leafy.service;
 
 import com.leafy.dto.journal.JournalCreateRequest;
 import com.leafy.dto.journal.JournalDetailResponse;
+import com.leafy.entity.Emotion;
 import com.leafy.entity.Journal;
 import com.leafy.entity.User;
 import com.leafy.exception.BusinessException;
 import com.leafy.exception.ErrorCode;
+import com.leafy.repository.EmotionRepository;
 import com.leafy.repository.JournalRepository;
 import com.leafy.repository.UserRepository;
 import com.leafy.util.AESUtil;
@@ -15,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +29,7 @@ public class JournalService {
 
     private final JournalRepository journalRepository;
     private final UserRepository userRepository;
+    private final EmotionRepository emotionRepository;
     private final AsyncAnalysisService asyncAnalysisService;
     private final AESUtil aesUtil;
 
@@ -42,7 +46,7 @@ public class JournalService {
                 .user(user)
                 .content(encryptedContent)
                 .voiceUrl(request.getVoiceUrl())
-                .imgUrl(request.getImgUrl())
+                .imageUrls(request.getImageUrls() != null ? request.getImageUrls() : List.of())
                 .build();
 
         Journal savedJournal = journalRepository.save(journal);
@@ -73,14 +77,25 @@ public class JournalService {
 
     private JournalDetailResponse convertToDetailResponse(Journal journal) {
         String decryptedContent = aesUtil.decrypt(journal.getContent());
-        
-        return JournalDetailResponse.builder()
+
+        JournalDetailResponse.JournalDetailResponseBuilder builder = JournalDetailResponse.builder()
                 .id(journal.getId())
                 .content(decryptedContent)
                 .voiceUrl(journal.getVoiceUrl())
-                .imgUrl(journal.getImgUrl())
+                .imageUrls(new ArrayList<>(journal.getImageUrls()))
                 .analysisStatus(journal.getAnalysisStatus())
-                .createdAt(journal.getCreatedAt())
-                .build();
+                .createdAt(journal.getCreatedAt());
+
+        emotionRepository.findByJournalId(journal.getId())
+                .ifPresent(emotion -> builder.emotionResult(
+                        JournalDetailResponse.EmotionResponse.builder()
+                                .joyScore(emotion.getJoyScore())
+                                .sadnessScore(emotion.getSadnessScore())
+                                .stressLevel(emotion.getStressLevel())
+                                .emotionSummary(emotion.getEmotionSummary())
+                                .build()
+                ));
+
+        return builder.build();
     }
 }

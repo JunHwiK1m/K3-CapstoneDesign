@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @Builder
 @NoArgsConstructor
@@ -21,6 +23,6 @@ public class JournalCreateRequest {
     @Schema(description = "음성 파일 URL", example = "https://storage.leafy.com/voice/123.mp3")
     private String voiceUrl;
 
-    @Schema(description = "이미지 파일 URL", example = "https://storage.leafy.com/img/123.jpg")
-    private String imgUrl;
+    @Schema(description = "이미지 파일 URL 리스트", example = "[\"https://storage.leafy.com/img/1.jpg\", \"https://storage.leafy.com/img/2.jpg\"]")
+    private List<String> imageUrls;
 }

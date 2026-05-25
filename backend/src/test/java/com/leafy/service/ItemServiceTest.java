@@ -1,5 +1,6 @@
 package com.leafy.service;
 
+import com.leafy.dto.item.UserItemResponse;
 import com.leafy.entity.Item;
 import com.leafy.entity.UserItem;
 import com.leafy.repository.ItemRepository;
@@ -12,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,6 +33,26 @@ class ItemServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Test
+    @DisplayName("사용자 소유 아이템 목록 조회 테스트")
+    void getUserItemsTest() {
+        // Given
+        Long userId = 1L;
+        Item item = Item.builder().id(100L).itemName("테스트 아이템").build();
+        UserItem userItem = UserItem.builder().id(1L).item(item).isEquipped(false).build();
+        
+        given(userItemRepository.findAllByUserId(userId))
+                .willReturn(List.of(userItem));
+
+        // When
+        List<UserItemResponse> result = itemService.getUserItems(userId);
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).itemName()).isEqualTo("테스트 아이템");
+        assertThat(result.get(0).userItemId()).isEqualTo(1L);
+    }
 
     @Test
     @DisplayName("장착 중인 아이템 기반 페르소나 스타일 조회 테스트")
