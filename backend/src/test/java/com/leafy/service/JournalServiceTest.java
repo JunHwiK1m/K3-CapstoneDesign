@@ -1,12 +1,12 @@
 package com.leafy.service;
 
 import com.leafy.dto.journal.JournalCreateRequest;
-import com.leafy.dto.journal.JournalDetailResponse;
 import com.leafy.entity.Journal;
 import com.leafy.entity.User;
 import com.leafy.exception.BusinessException;
 import com.leafy.repository.JournalRepository;
 import com.leafy.repository.UserRepository;
+import com.leafy.util.AESUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +40,7 @@ class JournalServiceTest {
     private AsyncAnalysisService asyncAnalysisService;
 
     @Mock
-    private com.leafy.util.AESUtil aesUtil;
+    private AESUtil aesUtil;
 
     @Test
     @DisplayName("일기 생성 및 분석 요청 테스트")
@@ -47,10 +48,17 @@ class JournalServiceTest {
         // Given
         Long userId = 1L;
         User user = User.builder().id(userId).build();
-        JournalCreateRequest request = new JournalCreateRequest();
-        setPrivateField(request, "content", "Test Content");
+        JournalCreateRequest request = JournalCreateRequest.builder()
+                .content("Test Content")
+                .imageUrls(List.of("http://example.com/image.jpg"))
+                .build();
         
-        Journal journal = Journal.builder().id(100L).user(user).content("encrypted").build();
+        Journal journal = Journal.builder()
+                .id(100L)
+                .user(user)
+                .content("encrypted")
+                .imageUrls(List.of("http://example.com/image.jpg"))
+                .build();
         
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(aesUtil.encrypt("Test Content")).willReturn("encrypted");
@@ -78,15 +86,5 @@ class JournalServiceTest {
         // When & Then
         assertThatThrownBy(() -> journalService.getJournal(userId, 100L))
                 .isInstanceOf(BusinessException.class);
-    }
-
-    private void setPrivateField(Object target, String fieldName, Object value) {
-        try {
-            java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            field.set(target, value);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }

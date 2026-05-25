@@ -3,6 +3,7 @@ package com.leafy.service;
 import com.leafy.client.AiServerClient;
 import com.leafy.dto.ai.FullAnalysisResponse;
 import com.leafy.dto.journal.JournalCreateRequest;
+import com.leafy.dto.journal.JournalDetailResponse;
 import com.leafy.entity.*;
 import com.leafy.repository.*;
 import org.junit.jupiter.api.AfterEach;
@@ -45,14 +46,6 @@ public class JournalIntegrationTest {
     @MockitoBean
     private AiServerClient aiServerClient;
 
-    @AfterEach
-    void tearDown() {
-        recommendationRepository.deleteAll();
-        emotionRepository.deleteAll();
-        journalRepository.deleteAll();
-        userRepository.deleteAll();
-    }
-
     @Test
     @DisplayName("일기 작성부터 AI 분석 결과 저장까지의 전체 흐름 테스트")
     void fullJournalProcessTest() throws InterruptedException {
@@ -83,17 +76,33 @@ public class JournalIntegrationTest {
         //  비결정적인 스레드 실행을 피하기 위해 여기서는 무시하고 수동으로 호출하여 검증합니다.)
         JournalCreateRequest request = JournalCreateRequest.builder()
                 .content("오늘 날씨가 너무 좋아서 행복했다.")
+                .imageUrls(List.of("https://example.com/happy.jpg", "https://example.com/sun.jpg"))
                 .build();
         Long journalId = journalService.createJournal(user.getId(), request);
 
-        // 4. 비동기 분석 서비스 직접 호출 (동기적으로 실행하여 결과 확인)
-        // 실제 운영 환경의 @Async 스레드와 충돌할 수 있으므로 잠시 대기하거나 직접 호출
-        Thread.sleep(500); // 자동 실행된 @Async 작업이 끝날 때까지 대기하거나 실패하게 둠
+        // 4. 비동기 분석 서비스 직접 호출 및 완료 대기
         asyncAnalysisService.analyzeJournal(journalId);
 
+        // 최대 5초 동안 상태가 COMPLETED가 될 때까지 대기 (Polling)
+        Journal journal = null;
+        for (int i = 0; i < 50; i++) {
+            journal = journalRepository.findById(journalId).orElseThrow();
+            if (journal.getAnalysisStatus() == AnalysisStatus.COMPLETED) {
+                break;
+            }
+            Thread.sleep(100);
+        }
+
         // 5. 결과 검증
-        Journal journal = journalRepository.findById(journalId).orElseThrow();
-        assertThat(journal.getAnalysisStatus()).isEqualTo(AnalysisStatus.COMPLETED);
+        JournalDetailResponse response = journalService.getJournal(user.getId(), journalId);
+        assertThat(response.getAnalysisStatus()).isEqualTo(AnalysisStatus.COMPLETED);
+        assertThat(response.getImageUrls()).hasSize(2);
+        assertThat(response.getImageUrls()).contains("https://example.com/happy.jpg");
+        
+        // 감정 분석 결과 검증 추가
+        assertThat(response.getEmotionResult()).isNotNull();
+        assertThat(response.getEmotionResult().getJoyScore()).isEqualByComparingTo("0.8500");
+        assertThat(response.getEmotionResult().getEmotionSummary()).contains("멋진 하루");
 
         Emotion emotion = emotionRepository.findByJournalId(journalId).orElseThrow();
         assertThat(emotion.getJoyScore()).isEqualByComparingTo("0.8500");
@@ -105,6 +114,17 @@ public class JournalIntegrationTest {
         Recommendation musicRec = recommendations.stream()
                 .filter(r -> r.getCategory() == RecommendationCategory.MUSIC)
                 .findFirst().orElseThrow();
-        assertThat(musicRec.getExternalLink()).isEqualTo("spotify:track:track_id_123");
+        assertThat(musicRec.getExternalLink()).contains("spotify:playlist:track_id_123");
+    }
+
+    @AfterEach
+    void tearDown() {
+        // 비동기 작업이 완료될 수 있도록 잠시 대기
+        try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+        
+        recommendationRepository.deleteAll();
+        emotionRepository.deleteAll();
+        journalRepository.deleteAll();
+        userRepository.deleteAll();
     }
 }

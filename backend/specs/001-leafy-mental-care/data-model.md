@@ -52,13 +52,22 @@ Leafy의 데이터 모델은 사용자(User)를 중심으로 일기(Journal), �
 | user_id | BIGINT (FK) | No | Users 테이블 참조 |
 | content | TEXT | No | 일기 텍스트 본문 (AES-256 암호화 저장) |
 | voice_url | VARCHAR(512) | Yes | 녹음된 음성 파일 URL |
-| img_url | VARCHAR(512) | Yes | 첨부 이미지 URL (기록용) |
 | analysis_status | VARCHAR(20) | No | 분석 상태 (PENDING, PROCESSING, COMPLETED, FAILED) |
 | created_at | DATETIME | No | 일기 작성 일시 |
 
 ---
 
-### 2.4 Emotions (감정 분석 결과)
+### 2.4 Journal Images (일기 첨부 이미지)
+일기에 첨부된 여러 장의 이미지 URL을 관리합니다. (Journals와 1:N 관계)
+
+| Column | Type | Nullable | Comment |
+| :--- | :--- | :--- | :--- |
+| journal_id | BIGINT (FK) | No | Journals 테이블 참조 |
+| image_url | VARCHAR(512) | No | 첨부 이미지 URL |
+
+---
+
+### 2.5 Emotions (감정 분석 결과)
 일기 텍스트/음성을 분석하여 도출된 정량적 수치와 요약 정보를 저장합니다.
 
 | Column | Type | Nullable | Comment |

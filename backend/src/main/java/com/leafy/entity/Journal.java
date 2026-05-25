@@ -1,6 +1,8 @@
 package com.leafy.entity;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
@@ -21,6 +23,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "journals")
@@ -46,8 +50,11 @@ public class Journal {
     @Column(name = "voice_url")
     private String voiceUrl;
 
-    @Column(name = "img_url")
-    private String imgUrl;
+    @ElementCollection
+    @CollectionTable(name = "journal_images", joinColumns = @JoinColumn(name = "journal_id"))
+    @Column(name = "image_url")
+    @Builder.Default
+    private List<String> imageUrls = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "analysis_status", nullable = false)

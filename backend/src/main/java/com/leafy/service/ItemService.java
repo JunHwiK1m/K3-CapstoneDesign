@@ -1,5 +1,6 @@
 package com.leafy.service;
 
+import com.leafy.dto.item.UserItemResponse;
 import com.leafy.entity.Item;
 import com.leafy.entity.User;
 import com.leafy.entity.UserItem;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +27,12 @@ public class ItemService {
 
     public List<Item> getAllItems() {
         return itemRepository.findAll();
+    }
+
+    public List<UserItemResponse> getUserItems(Long userId) {
+        return userItemRepository.findAllByUserId(userId).stream()
+                .map(UserItemResponse::from)
+                .collect(Collectors.toList());
     }
 
     @Transactional
