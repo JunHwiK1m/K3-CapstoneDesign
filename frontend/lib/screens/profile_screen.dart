@@ -1,14 +1,21 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final String token;
+  const ProfileScreen({super.key, required this.token});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
+
+  String _nickname = "불러오는 중...";
+  bool _isLoading = true;
 
   final List<String> _categories = ['일기장', '폰트', '테마', '캐릭터'];
 
@@ -39,6 +46,50 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   void initState() {
     super.initState();
     _tabController = TabController(length: _categories.length, vsync: this);
+    _fetchProfileData();
+  }
+
+  Future<void> _fetchProfileData() async {
+    final token = widget.token.trim();
+    if (token.isEmpty) {
+      if (mounted)
+        setState(() {
+          _nickname = "이름 없음";
+          _isLoading = false;
+        });
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8080/api/users/settings'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        final data = body['data'];
+        if (mounted && data != null) {
+          setState(() {
+            _nickname = data['nickname'] ?? '이름 없음';
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted)
+          setState(() {
+            _nickname = "불러오기 실패";
+            _isLoading = false;
+          });
+      }
+    } catch (e) {
+      debugPrint("Error fetching profile: $e");
+      if (mounted)
+        setState(() {
+          _nickname = "오류 발생";
+          _isLoading = false;
+        });
+    }
   }
 
   @override
@@ -77,9 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       body: NestedScrollView(
         headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
           return <Widget>[
-            SliverToBoxAdapter(
-              child: _buildProfileHeader(context),
-            ),
+            SliverToBoxAdapter(child: _buildProfileHeader(context)),
             SliverPersistentHeader(
               pinned: true,
               delegate: _SliverAppBarDelegate(
@@ -88,7 +137,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   labelColor: Theme.of(context).colorScheme.primary,
                   unselectedLabelColor: Colors.grey,
                   indicatorColor: Theme.of(context).colorScheme.primary,
-                  tabs: _categories.map((category) => Tab(text: category)).toList(),
+                  tabs: _categories
+                      .map((category) => Tab(text: category))
+                      .toList(),
                 ),
               ),
             ),
@@ -136,13 +187,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       Text(
                         item['name'],
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: isApplied ? FontWeight.bold : FontWeight.normal,
-                            ),
+                          fontWeight: isApplied
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: isApplied ? null : () => _applyItem(category, index),
+                        onPressed: isApplied
+                            ? null
+                            : () => _applyItem(category, index),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isApplied
                               ? Colors.grey.shade300
@@ -153,7 +208,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 8,
+                          ),
                         ),
                         child: Text(isApplied ? '적용됨' : '적용하기'),
                       ),
@@ -176,13 +234,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           CircleAvatar(
             radius: 50,
             backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-            child: Icon(Icons.person, size: 50, color: Theme.of(context).colorScheme.primary),
+            child: Icon(
+              Icons.person,
+              size: 50,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 16),
-          Text(
-            '감성 토끼', // Mock Nickname
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
-          ),
+          _isLoading
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  _nickname,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontSize: 24),
+                ),
           const SizedBox(height: 8),
           Text(
             '나를 알아가는 여정, 12일째',
@@ -197,7 +267,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainer,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -206,13 +278,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 Container(
                   width: 1,
                   height: 40,
-                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withOpacity(0.5),
                 ),
                 _buildStatColumn('달성한 목표', '34', context),
                 Container(
                   width: 1,
                   height: 40,
-                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withOpacity(0.5),
                 ),
                 _buildStatColumn('보유 아이템', '12', context),
               ],
@@ -255,14 +331,20 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get minExtent => _tabBar.preferredSize.height;
-  
+
   @override
   double get maxExtent => _tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
-      color: Theme.of(context).colorScheme.surface, // Background to prevent transparency on scroll
+      color: Theme.of(
+        context,
+      ).colorScheme.surface, // Background to prevent transparency on scroll
       child: _tabBar,
     );
   }
@@ -272,4 +354,3 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     return false;
   }
 }
-

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'diary_write_screen.dart';
 import 'store_screen.dart';
 import 'records_screen.dart';
@@ -6,44 +8,202 @@ import 'profile_screen.dart';
 import 'settings_screen.dart';
 
 class DiaryHomePage extends StatefulWidget {
-  const DiaryHomePage({super.key});
+  final String? initialToken;
+  const DiaryHomePage({super.key, this.initialToken});
 
   @override
   State<DiaryHomePage> createState() => _DiaryHomePageState();
 }
 
 class _DiaryHomePageState extends State<DiaryHomePage> {
-  final List<Map<String, dynamic>> _todos = [
-    {'title': '물 3잔 마시기', 'isDone': true},
-    {'title': '10분 명상하기', 'isDone': false},
-    {'title': '감사 일기 쓰기', 'isDone': false},
-  ];
+  List<dynamic> _todos = [];
+  double _successRate = 0.0;
+  int _completedCount = 0;
+  int _totalCount = 0;
+  bool _isLoading = true;
 
   final TextEditingController _todoController = TextEditingController();
+  late final TextEditingController _tempTokenController;
 
-  void _addTodo() {
+  @override
+  void initState() {
+    super.initState();
+    _tempTokenController = TextEditingController(
+      text: widget.initialToken ?? '',
+    );
+    if (_tempTokenController.text.isNotEmpty) {
+      _fetchData();
+    } else {
+      _isLoading = false;
+    }
+  }
+
+  void _fetchData() {
+    setState(() => _isLoading = true);
+    Future.wait([_fetchTodos(), _fetchTodoStats()]).whenComplete(() {
+      if (mounted) setState(() => _isLoading = false);
+    });
+  }
+
+  Future<void> _fetchTodos() async {
+    final token = _tempTokenController.text.trim();
+    if (token.isEmpty) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8080/api/todos'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        if (mounted) {
+          setState(() {
+            _todos = body['data'] ?? [];
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching todos: $e");
+    }
+  }
+
+  Future<void> _fetchTodoStats() async {
+    final token = _tempTokenController.text.trim();
+    if (token.isEmpty) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8080/api/todos/stats'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        final data = body['data'];
+        if (mounted && data != null) {
+          setState(() {
+            _totalCount = data['totalCount'] ?? 0;
+            _completedCount = data['completedCount'] ?? 0;
+            _successRate = data['completionRate']?.toDouble() ?? 0.0;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching todo stats: $e");
+    }
+  }
+
+  Future<void> _addTodo() async {
     final text = _todoController.text.trim();
-    if (text.isNotEmpty) {
-      setState(() {
-        _todos.add({'title': text, 'isDone': false});
-      });
-      Future.delayed(Duration.zero, () {
+    final token = _tempTokenController.text.trim();
+    if (text.isEmpty || token.isEmpty) return;
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8080/api/todos'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'taskName': text}),
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         _todoController.clear();
+        _fetchData(); // Refresh list and stats
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('할 일 추가 실패: ${response.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error adding todo: $e");
+    }
+  }
+
+  Future<void> _completeTodo(int todoId, int index) async {
+    final token = _tempTokenController.text.trim();
+    if (token.isEmpty) return;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('http://10.0.2.2:8080/api/todos/$todoId/complete'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        _fetchTodoStats(); // Refresh stats (list is already optimistically updated)
+      } else {
+        // Revert optimistic update on failure
+        if (mounted) {
+          setState(() {
+            _todos[index]['isCompleted'] = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('할 일 완료 처리 실패: ${response.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error completing todo: $e");
+      // Revert optimistic update on failure
+      if (mounted) {
+        setState(() {
+          _todos[index]['isCompleted'] = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteTodo(int todoId) async {
+    final token = _tempTokenController.text.trim();
+    if (token.isEmpty) return;
+
+    // Optimistically remove from list
+    int indexToRemove = _todos.indexWhere((todo) => todo['id'] == todoId);
+    Map<String, dynamic>? removedTodo;
+    if (indexToRemove != -1) {
+      setState(() {
+        removedTodo = _todos.removeAt(indexToRemove);
       });
+    }
+
+    try {
+      final response = await http.delete(
+        Uri.parse('http://10.0.2.2:8080/api/todos/$todoId'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        _fetchTodoStats(); // Refresh stats
+      } else {
+        // Revert on failure
+        if (mounted && removedTodo != null && indexToRemove != -1) {
+          setState(() {
+            _todos.insert(indexToRemove, removedTodo!);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('할 일 삭제 실패: ${response.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error deleting todo: $e");
+      if (mounted && removedTodo != null && indexToRemove != -1) {
+        setState(() {
+          _todos.insert(indexToRemove, removedTodo!);
+        });
+      }
     }
   }
 
   @override
   void dispose() {
     _todoController.dispose();
+    _tempTokenController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    int completedCount = _todos.where((todo) => todo['isDone']).length;
-    double successRate = _todos.isEmpty ? 0 : completedCount / _todos.length;
-
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -62,6 +222,23 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 임시 토큰 입력 필드 (테스트용)
+            TextField(
+              controller: _tempTokenController,
+              decoration: InputDecoration(
+                hintText: '임시 토큰 입력 (입력 후 새로고침)',
+                filled: true,
+                fillColor: Colors.red.withOpacity(0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _fetchData,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             // Top Section: Mascot Character Bubble
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,7 +296,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 Text(
-                  '$completedCount / ${_todos.length}',
+                  '$_completedCount / $_totalCount',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -146,7 +323,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: LinearProgressIndicator(
-                      value: successRate,
+                      value: _successRate,
                       minHeight: 12,
                       backgroundColor: Theme.of(
                         context,
@@ -157,60 +334,93 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                   const SizedBox(height: 24),
 
                   // To-Do List
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _todos.length,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.secondary.withOpacity(0.2),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator(),
+                    )
+                  else if (_todos.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Text('오늘의 목표가 없습니다.\n아래에서 새로운 목표를 추가해보세요!'),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _todos.length,
+                      itemBuilder: (context, index) {
+                        final todo = _todos[index];
+                        final bool isDone = todo['isCompleted'] ?? false;
+                        final String title = todo['taskName'] ?? '';
+                        final int id = todo['id'];
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.secondary.withOpacity(0.2),
                             ),
-                          ],
-                        ),
-                        child: CheckboxListTile(
-                          title: Text(
-                            _todos[index]['title'],
-                            style: TextStyle(
-                              decoration: _todos[index]['isDone']
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                              color: _todos[index]['isDone']
-                                  ? Theme.of(
-                                      context,
-                                    ).colorScheme.primary.withOpacity(0.5)
-                                  : Theme.of(context).colorScheme.primary,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: CheckboxListTile(
+                            title: Text(
+                              title,
+                              style: TextStyle(
+                                decoration: isDone
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                                color: isDone
+                                    ? Theme.of(
+                                        context,
+                                      ).colorScheme.primary.withOpacity(0.5)
+                                    : Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                            value: isDone,
+                            activeColor: Theme.of(context).colorScheme.primary,
+                            checkColor: Theme.of(context).colorScheme.surface,
+                            onChanged: (bool? value) {
+                              if (value == true && !isDone) {
+                                // Optimistic UI update
+                                setState(() {
+                                  _todos[index]['isCompleted'] = true;
+                                });
+                                _completeTodo(id, index);
+                              } else if (value == false && isDone) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('이미 완료된 목표는 취소할 수 없습니다.'),
+                                  ),
+                                );
+                              }
+                            },
+                            controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 0,
+                            ),
+                            secondary: IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () => _deleteTodo(id),
                             ),
                           ),
-                          value: _todos[index]['isDone'],
-                          activeColor: Theme.of(context).colorScheme.primary,
-                          checkColor: Theme.of(context).colorScheme.surface,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _todos[index]['isDone'] = value!;
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 0,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
 
                   // Add New To-Do Input
                   const SizedBox(height: 8),
@@ -291,7 +501,8 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const DiaryWriteScreen(),
+                  builder: (context) =>
+                      DiaryWriteScreen(token: _tempTokenController.text),
                 ),
               );
             });
@@ -319,7 +530,8 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const ProfileScreen(),
+                        builder: (context) =>
+                            ProfileScreen(token: _tempTokenController.text),
                       ),
                     );
                   });
@@ -349,7 +561,8 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const RecordsScreen(),
+                        builder: (context) =>
+                            RecordsScreen(token: _tempTokenController.text),
                       ),
                     );
                   });

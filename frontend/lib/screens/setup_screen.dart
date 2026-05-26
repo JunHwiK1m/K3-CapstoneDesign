@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'diary_home_page.dart';
 
 class SetupScreen extends StatefulWidget {
@@ -9,11 +11,13 @@ class SetupScreen extends StatefulWidget {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
+  final TextEditingController _tempTokenController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
   DateTime? _selectedDate;
   TimeOfDay? _wakeUpTime;
   TimeOfDay? _diaryTime;
-  
+  bool _isLoading = false;
+
   // 6. 일기 작성 용도 (택 1)
   String _selectedPurpose = '기록용';
   final List<String> _purposes = ['기록용', '계획용', '멘탈관리용', '갓생용', '기타'];
@@ -94,6 +98,7 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   void dispose() {
+    _tempTokenController.dispose();
     _nicknameController.dispose();
     super.dispose();
   }
@@ -101,9 +106,7 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('프로필 설정'),
-      ),
+      appBar: AppBar(title: const Text('프로필 설정')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -111,17 +114,43 @@ class _SetupScreenState extends State<SetupScreen> {
           children: [
             Text(
               '조금 더 알아가고 싶어요 ✨',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontSize: 24),
             ),
             const SizedBox(height: 32),
-            
+
+            // 0. 임시 토큰 입력 (테스트용)
+            Text(
+              '임시 로그인 토큰 (PC에서 복사해오세요)',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: Colors.red),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _tempTokenController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: 'eyJ... 로 시작하는 토큰을 붙여넣어주세요',
+                filled: true,
+                fillColor: Colors.red.withOpacity(0.05),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
             // 1. 프로필 이미지
             Center(
               child: Stack(
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
                     child: Icon(
                       Icons.person,
                       size: 50,
@@ -137,7 +166,11 @@ class _SetupScreenState extends State<SetupScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                        icon: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         onPressed: () {
                           // TODO: 이미지 선택 기능 구현
                         },
@@ -160,17 +193,31 @@ class _SetupScreenState extends State<SetupScreen> {
                 fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                  borderSide: BorderSide(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.secondary.withOpacity(0.5),
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                  borderSide: BorderSide(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.secondary.withOpacity(0.5),
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
               ),
             ),
             const SizedBox(height: 32),
@@ -182,11 +229,18 @@ class _SetupScreenState extends State<SetupScreen> {
               onTap: () => _selectDate(context),
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.secondary.withOpacity(0.5),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -196,15 +250,19 @@ class _SetupScreenState extends State<SetupScreen> {
                           ? '생년월일을 선택해주세요'
                           : '${_selectedDate!.year}년 ${_selectedDate!.month}월 ${_selectedDate!.day}일',
                       style: TextStyle(
-                        color: _selectedDate == null 
-                            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                        color: _selectedDate == null
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.5)
                             : Theme.of(context).colorScheme.primary,
                         fontSize: 16,
                       ),
                     ),
                     Icon(
                       Icons.calendar_today_rounded,
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.7),
                     ),
                   ],
                 ),
@@ -219,11 +277,18 @@ class _SetupScreenState extends State<SetupScreen> {
               onTap: () => _selectTime(context, true),
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.secondary.withOpacity(0.5),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -233,15 +298,19 @@ class _SetupScreenState extends State<SetupScreen> {
                           ? '기상 시간을 선택해주세요'
                           : _wakeUpTime!.format(context),
                       style: TextStyle(
-                        color: _wakeUpTime == null 
-                            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                        color: _wakeUpTime == null
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.5)
                             : Theme.of(context).colorScheme.primary,
                         fontSize: 16,
                       ),
                     ),
                     Icon(
                       Icons.access_time_rounded,
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.7),
                     ),
                   ],
                 ),
@@ -256,11 +325,18 @@ class _SetupScreenState extends State<SetupScreen> {
               onTap: () => _selectTime(context, false),
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.secondary.withOpacity(0.5),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -270,15 +346,19 @@ class _SetupScreenState extends State<SetupScreen> {
                           ? '일기 작성 시간을 선택해주세요'
                           : _diaryTime!.format(context),
                       style: TextStyle(
-                        color: _diaryTime == null 
-                            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                        color: _diaryTime == null
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.5)
                             : Theme.of(context).colorScheme.primary,
                         fontSize: 16,
                       ),
                     ),
                     Icon(
                       Icons.access_time_rounded,
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.7),
                     ),
                   ],
                 ),
@@ -287,13 +367,20 @@ class _SetupScreenState extends State<SetupScreen> {
             const SizedBox(height: 32),
 
             // 6. 일기 작성 용도
-            Text('일기 작성 용도 (택 1)', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              '일기 작성 용도 (택 1)',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withOpacity(0.5),
+                ),
               ),
               child: Column(
                 children: _purposes.map((String purpose) {
@@ -314,13 +401,20 @@ class _SetupScreenState extends State<SetupScreen> {
             const SizedBox(height: 32),
 
             // 7. 조언 말투 설정
-            Text('AI 에이전트의 말투 (택 1)', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'AI 에이전트의 말투 (택 1)',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withOpacity(0.5),
+                ),
               ),
               child: Column(
                 children: _tones.map((String tone) {
@@ -344,17 +438,26 @@ class _SetupScreenState extends State<SetupScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('좋아하는 음악 장르 (다중 선택)', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  '좋아하는 음악 장르 (다중 선택)',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 TextButton(
                   onPressed: () {
                     setState(() {
-                      bool allSelected = _musicStyles.values.every((element) => element);
+                      bool allSelected = _musicStyles.values.every(
+                        (element) => element,
+                      );
                       _musicStyles.updateAll((key, value) => !allSelected);
                     });
                   },
                   child: Text(
-                    _musicStyles.values.every((element) => element) ? '모두 해제' : '모두 선택',
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                    _musicStyles.values.every((element) => element)
+                        ? '모두 해제'
+                        : '모두 선택',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
               ],
@@ -372,7 +475,9 @@ class _SetupScreenState extends State<SetupScreen> {
                       _musicStyles[key] = value;
                     });
                   },
-                  selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  selectedColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withOpacity(0.2),
                   checkmarkColor: Theme.of(context).colorScheme.primary,
                 );
               }).toList(),
@@ -387,7 +492,11 @@ class _SetupScreenState extends State<SetupScreen> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5)),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withOpacity(0.5),
+                ),
               ),
               child: CheckboxListTile(
                 title: Text(
@@ -396,7 +505,12 @@ class _SetupScreenState extends State<SetupScreen> {
                 ),
                 subtitle: Text(
                   '작성하신 일기 내용을 바탕으로 감정 분석 및 콘텐츠 추천을 제공합니다. 거부하셔도 기본 일기장 기능은 사용하실 수 있습니다.',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary.withOpacity(0.6)),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.6),
+                  ),
                 ),
                 value: _agreedToAIAnalysis,
                 onChanged: (bool? value) {
@@ -416,15 +530,149 @@ class _SetupScreenState extends State<SetupScreen> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {
-                  Future.delayed(Duration.zero, () {
-                    if (!context.mounted) return;
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const DiaryHomePage()),
-                    );
-                  });
-                },
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        if (_nicknameController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('닉네임을 입력해주세요.')),
+                          );
+                          return;
+                        }
+
+                        setState(() {
+                          _isLoading = true;
+                        });
+
+                        try {
+                          // 선택된 음악 장르 문자열로 변환
+                          String selectedMusicStyles = _musicStyles.entries
+                              .where((e) => e.value)
+                              .map((e) => e.key)
+                              .join(', ');
+
+                          // 시간 포맷팅 헬퍼
+                          String formatTime(TimeOfDay? time) {
+                            if (time == null) return "00:00:00";
+                            return "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00";
+                          }
+
+                          // 날짜 포맷팅 헬퍼
+                          String formatDate(DateTime? date) {
+                            if (date == null) return "2000-01-01";
+                            return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+                          }
+
+                          // 임시 토큰 (이후 실제 인증 토큰으로 교체해야 함)
+                          final String tempToken = _tempTokenController.text
+                              .trim();
+                          if (tempToken.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('테스트용 임시 토큰을 위에 입력해주세요.'),
+                              ),
+                            );
+                            setState(() => _isLoading = false);
+                            return;
+                          }
+
+                          final headers = {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer $tempToken',
+                          };
+
+                          // Enum 매핑 (프론트엔드 한글 -> 백엔드 Enum)
+                          String mappedPurpose = 'RECORDING';
+                          switch (_selectedPurpose) {
+                            case '기록용':
+                              mappedPurpose = 'RECORDING';
+                              break;
+                            case '계획용':
+                              mappedPurpose = 'PLANNING';
+                              break;
+                            case '멘탈관리용':
+                              mappedPurpose = 'MENTAL_CARE';
+                              break;
+                            case '갓생용':
+                              mappedPurpose = 'GOD_SAENG';
+                              break;
+                            default:
+                              mappedPurpose = 'RECORDING';
+                              break;
+                          }
+
+                          String mappedTone = 'BASIC';
+                          switch (_selectedTone) {
+                            case '친근한':
+                            case '공감적':
+                              mappedTone = 'FRIENDLY';
+                              break;
+                            case '직설적':
+                            default:
+                              mappedTone = 'BASIC';
+                              break;
+                          }
+
+                          // 1. 설정 저장 (PATCH /api/users/settings)
+                          final settingsResponse = await http.patch(
+                            Uri.parse(
+                              'http://10.0.2.2:8080/api/users/settings',
+                            ),
+                            headers: headers,
+                            body: jsonEncode({
+                              "usagePurpose": mappedPurpose,
+                              "diaryTime": formatTime(_diaryTime),
+                              "wakeUpTime": formatTime(_wakeUpTime),
+                              "nickname": _nicknameController.text.trim(),
+                              "personaStyle": mappedTone,
+                              "musicStyle": selectedMusicStyles,
+                              "birthDate": formatDate(_selectedDate),
+                            }),
+                          );
+
+                          if (settingsResponse.statusCode >= 200 &&
+                              settingsResponse.statusCode < 300) {
+                            // 2. AI 분석 동의 설정 (PUT /api/users/settings/ai-analysis)
+                            await http.put(
+                              Uri.parse(
+                                'http://10.0.2.2:8080/api/users/settings/ai-analysis?enabled=$_agreedToAIAnalysis',
+                              ),
+                              headers: headers,
+                            );
+
+                            if (context.mounted) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DiaryHomePage(initialToken: tempToken),
+                                ),
+                              );
+                            }
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '설정 저장 실패: HTTP ${settingsResponse.statusCode}',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('오류가 발생했습니다: $e')),
+                            );
+                          }
+                        } finally {
+                          if (context.mounted) {
+                            setState(() {
+                              _isLoading = false;
+                            });
+                          }
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.surface,
@@ -432,10 +680,22 @@ class _SetupScreenState extends State<SetupScreen> {
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                child: const Text(
-                  '시작하기',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        '시작하기',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -444,4 +704,3 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 }
-
