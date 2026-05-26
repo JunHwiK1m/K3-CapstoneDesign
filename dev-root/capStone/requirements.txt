@@ -1,0 +1,6 @@
+openai
+openai-whisper
+librosa
+pytest
+pytest-asyncio
+python-dotenv
