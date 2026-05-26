@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-05-23]
+### Added / Changed
+- `backend/.env` 파일 생성
+  - 로컬 환경 실행 시 발생하는 `jwtTokenProvider` 의존성 주입 에러 해결을 위해 환경 변수 파일 생성
+- `frontend/lib/screens/login_screen.dart` 파일 수정
+  - 사용하지 않는 `setup_screen.dart` import 구문 제거 (lint 에러 수정)
+- `frontend/lib/screens/login_screen.dart` 파일 로그인 기능 구현
+  - 구글 로그인 버튼 탭 시 백엔드 리다이렉트 방식을 사용하여 브라우저로 OAuth2 인증(가입/로그인)이 진행되도록 `url_launcher` 적용
+- `frontend/api.md` 파일 업데이트
+  - `backend/README.md`를 참고하여 모든 API의 엔드포인트 및 응답 데이터(Response Data) 예시를 표 형태로 반영
+
 ## [2026-05-20]
 ### Added / Changed
 - `frontend/lib/screens/analysis_result_screen.dart` 파일 화면 구성 수정

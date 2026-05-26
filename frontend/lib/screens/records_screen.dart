@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:http/http.dart' as http;
 
 class RecordsScreen extends StatefulWidget {
-  const RecordsScreen({super.key});
+  final String token;
+  const RecordsScreen({super.key, required this.token});
 
   @override
   State<RecordsScreen> createState() => _RecordsScreenState();
@@ -10,26 +13,11 @@ class RecordsScreen extends StatefulWidget {
 
 class _RecordsScreenState extends State<RecordsScreen> {
   // Join Date -> limit firstDay of calendar
-  final DateTime _joinDate = DateTime(2026, 4, 15); // mock join date
+  final DateTime _joinDate = DateTime(2025, 1, 1);
 
-  // Mock diary data where key is Date
-  final Map<DateTime, Map<String, dynamic>> _diaries = {
-    DateTime(2026, 5, 2): {
-      'emotion': '✨',
-      'content': '오랜만에 만난 친구들과의 대화에서 많은 영감을 얻었다. 새로운 취미를 시작해볼까 하는 생각에 마음이 설렌다.',
-      'score': 85,
-    },
-    DateTime(2026, 5, 4): {
-      'emotion': '☁️',
-      'content': '비가 오는 날. 창밖으로 떨어지는 빗방울 소리를 들으며 책을 읽었다. 복잡했던 마음이 조금씩 차분해지는 기분이다.',
-      'score': 60,
-    },
-    DateTime(2026, 5, 5): {
-      'emotion': '🌿',
-      'content': '오늘 하루는 참 따뜻했다. 길을 걷다 우연히 발견한 작은 카페에서 향긋한 커피를 마시며 여유를 즐겼다.',
-      'score': 92,
-    },
-  };
+  // Map diary data where key is Date
+  final Map<DateTime, Map<String, dynamic>> _diaries = {};
+  bool _isLoading = true;
 
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
@@ -38,6 +26,111 @@ class _RecordsScreenState extends State<RecordsScreen> {
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+    _fetchJournals();
+  }
+
+  DateTime _parseDate(dynamic createdAtRaw) {
+    if (createdAtRaw == null) return DateTime.now();
+    if (createdAtRaw is String) {
+      return DateTime.parse(createdAtRaw);
+    } else if (createdAtRaw is List) {
+      return DateTime(
+        createdAtRaw.isNotEmpty ? createdAtRaw[0] : 2026,
+        createdAtRaw.length > 1 ? createdAtRaw[1] : 1,
+        createdAtRaw.length > 2 ? createdAtRaw[2] : 1,
+        createdAtRaw.length > 3 ? createdAtRaw[3] : 0,
+        createdAtRaw.length > 4 ? createdAtRaw[4] : 0,
+        createdAtRaw.length > 5 ? createdAtRaw[5] : 0,
+      );
+    }
+    return DateTime.now();
+  }
+
+  Future<void> _fetchJournals() async {
+    final token = widget.token.trim();
+    if (token.isEmpty) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8080/api/journals'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        final List<dynamic> data = body['data'] ?? [];
+
+        if (mounted) {
+          setState(() {
+            _diaries.clear();
+            for (var item in data) {
+              final DateTime createdAt = _parseDate(item['createdAt']);
+              final DateTime normalizedDate = _normalizeDate(createdAt);
+
+              _diaries[normalizedDate] = {
+                'id': item['id'],
+                'content': item['content'] ?? '내용 없음',
+                'analysisStatus': item['analysisStatus'] ?? 'PENDING',
+                'emotion': '🌱', // 기본값
+                'score': 0, // 기본값
+              };
+            }
+            _isLoading = false;
+          });
+        }
+
+        // 상세 조회를 통해 감정 데이터 덮어쓰기 (COMPLETED 상태인 경우만)
+        for (var item in data) {
+          if (item['analysisStatus'] == 'COMPLETED' && item['id'] != null) {
+            final journalId = item['id'];
+            final DateTime normalizedDate = _normalizeDate(
+              _parseDate(item['createdAt']),
+            );
+            try {
+              final detailRes = await http.get(
+                Uri.parse('http://10.0.2.2:8080/api/journals/$journalId'),
+                headers: {'Authorization': 'Bearer $token'},
+              );
+              if (detailRes.statusCode == 200) {
+                final detailBody = jsonDecode(utf8.decode(detailRes.bodyBytes));
+                final detailData = detailBody['data'];
+                if (detailData != null && detailData['emotion'] != null) {
+                  final double joyScore =
+                      (detailData['emotion']['joyScore'] ?? 0.0).toDouble();
+                  int score = (joyScore * 100).toInt();
+                  String emotionEmoji = '🌱';
+                  if (joyScore >= 0.7)
+                    emotionEmoji = '✨';
+                  else if (joyScore >= 0.4)
+                    emotionEmoji = '🌿';
+                  else
+                    emotionEmoji = '☁️';
+
+                  if (mounted) {
+                    setState(() {
+                      if (_diaries.containsKey(normalizedDate)) {
+                        _diaries[normalizedDate]!['score'] = score;
+                        _diaries[normalizedDate]!['emotion'] = emotionEmoji;
+                      }
+                    });
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint("Error fetching detail for $journalId: $e");
+            }
+          }
+        }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      debugPrint("Error fetching journals: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   // Helper to normalize datetime for map key matching
@@ -47,8 +140,12 @@ class _RecordsScreenState extends State<RecordsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final normalizedSelected = _selectedDay != null ? _normalizeDate(_selectedDay!) : null;
-    final selectedDiary = normalizedSelected != null ? _diaries[normalizedSelected] : null;
+    final normalizedSelected = _selectedDay != null
+        ? _normalizeDate(_selectedDay!)
+        : null;
+    final selectedDiary = normalizedSelected != null
+        ? _diaries[normalizedSelected]
+        : null;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -66,11 +163,17 @@ class _RecordsScreenState extends State<RecordsScreen> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withOpacity(0.3),
+                ),
               ),
               child: TableCalendar(
                 firstDay: _joinDate,
-                lastDay: DateTime.now().add(const Duration(days: 30)), // up to next month
+                lastDay: DateTime.now().add(
+                  const Duration(days: 30),
+                ), // up to next month
                 focusedDay: _focusedDay,
                 selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
                 onDaySelected: (selectedDay, focusedDay) {
@@ -87,20 +190,34 @@ class _RecordsScreenState extends State<RecordsScreen> {
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,
                   ),
-                  leftChevronIcon: Icon(Icons.chevron_left, color: Theme.of(context).colorScheme.primary),
-                  rightChevronIcon: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.primary),
+                  leftChevronIcon: Icon(
+                    Icons.chevron_left,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  rightChevronIcon: Icon(
+                    Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 calendarStyle: CalendarStyle(
                   todayDecoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.secondary.withOpacity(0.5),
                     shape: BoxShape.circle,
                   ),
                   selectedDecoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
                     shape: BoxShape.circle,
                   ),
-                  defaultTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
-                  weekendTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary.withOpacity(0.6)),
+                  defaultTextStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  weekendTextStyle: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.6),
+                  ),
                 ),
                 calendarBuilders: CalendarBuilders(
                   markerBuilder: (context, day, events) {
@@ -125,7 +242,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: selectedDiary != null
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : selectedDiary != null
                   ? _buildDiaryCard(selectedDiary)
                   : _buildEmptyCard(),
             ),
@@ -142,7 +261,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
@@ -165,9 +286,14 @@ class _RecordsScreenState extends State<RecordsScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondary.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -186,7 +312,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
             child: SingleChildScrollView(
               child: Text(
                 diary['content'],
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.8),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(height: 1.8),
               ),
             ),
           ),
@@ -202,7 +330,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+        ),
       ),
       child: Center(
         child: Column(

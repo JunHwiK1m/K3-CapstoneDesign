@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'analysis_loading_screen.dart';
 
 class LinedPaperPainter extends CustomPainter {
@@ -23,7 +27,8 @@ class LinedPaperPainter extends CustomPainter {
 }
 
 class DiaryWriteScreen extends StatefulWidget {
-  const DiaryWriteScreen({super.key});
+  final String token;
+  const DiaryWriteScreen({super.key, required this.token});
 
   @override
   State<DiaryWriteScreen> createState() => _DiaryWriteScreenState();
@@ -31,15 +36,83 @@ class DiaryWriteScreen extends StatefulWidget {
 
 class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
   final TextEditingController _contentController = TextEditingController();
-  int _imageCount = 0;
+  final ImagePicker _picker = ImagePicker();
+  
+  String? _selectedImagePath;
   bool _isRecording = false;
+  bool _isSubmitting = false;
 
-  void _submit() {
-    // Navigate to loading screen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const AnalysisLoadingScreen()),
-    );
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        setState(() {
+          _selectedImagePath = image.path;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking image: $e");
+    }
+  }
+
+  Future<void> _submit() async {
+    final content = _contentController.text.trim();
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('일기 내용을 입력해주세요.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final token = widget.token.trim();
+      final payload = {
+        "content": content,
+        "imgUrl": _selectedImagePath ?? "",
+        "voiceUrl": "",
+      };
+
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:8080/api/journals'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AnalysisLoadingScreen()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('일기 저장 실패: ${response.statusCode}')),
+          );
+          setState(() {
+            _isSubmitting = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error submitting journal: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('오류가 발생했습니다. 다시 시도해주세요.')),
+        );
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -57,17 +130,28 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         actions: [
-          TextButton(
-            onPressed: _submit,
-            child: Text(
-              '완료',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
+          _isSubmitting 
+              ? const Padding(
+                  padding: EdgeInsets.only(right: 16.0),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20, 
+                      height: 20, 
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                )
+              : TextButton(
+                  onPressed: _submit,
+                  child: Text(
+                    '완료',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
         ],
       ),
       body: Row(
@@ -163,25 +247,48 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
                         IconButton(
                           icon: const Icon(Icons.photo_library_outlined),
                           color: Theme.of(context).colorScheme.primary,
-                          onPressed: () {
-                            if (_imageCount < 4) {
-                              setState(() {
-                                _imageCount++;
-                              });
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('이미지는 최대 4장까지 첨부할 수 있습니다.')),
-                              );
-                            }
-                          },
+                          onPressed: _pickImage,
                         ),
-                        Text(
-                          '$_imageCount / 4',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                            fontSize: 12,
+                        if (_selectedImagePath != null)
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                margin: const EdgeInsets.only(left: 8),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  image: DecorationImage(
+                                    image: FileImage(File(_selectedImagePath!)),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: -8,
+                                right: -8,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedImagePath = null;
+                                    });
+                                  },
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
                         const Spacer(),
                         // Voice Record Button
                         GestureDetector(
