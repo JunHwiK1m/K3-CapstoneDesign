@@ -47,3 +47,8 @@ jwt:
 
 encryption:
   key: "12345678901234561234567890123456"
+
+app:
+  storage:
+    local-path: ./test-uploads/
+    base-url: http://localhost:8080/uploads/

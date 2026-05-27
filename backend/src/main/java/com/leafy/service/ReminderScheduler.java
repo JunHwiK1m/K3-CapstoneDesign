@@ -21,6 +21,7 @@ public class ReminderScheduler {
 
     private final UserSettingsRepository userSettingsRepository;
     private final JournalRepository journalRepository;
+    private final FcmService fcmService;
 
     /**
      * 사용자가 설정한 리마인더 시간에 맞춰 알림을 발송합니다.
@@ -61,7 +62,15 @@ public class ReminderScheduler {
     }
 
     private void sendFcmNotification(User user) {
-        // FCM 발송 로직 시뮬레이션
-        log.info("FCM Reminder sent to user {}: '설정하신 시간이 되었습니다. 오늘 하루는 어떠셨나요? Leafy에 기록해보세요.'", user.getEmail());
+        if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
+            log.warn("Cannot send FCM reminder to user {}: No FCM token registered.", user.getEmail());
+            return;
+        }
+
+        String title = "오늘의 마음을 기록할 시간이에요! 🌿";
+        String body = user.getName() + "님, 설정하신 시간이 되었습니다. 오늘 하루는 어떠셨나요? Leafy에 기록해보세요.";
+        
+        fcmService.sendMessage(user.getFcmToken(), title, body);
+        log.info("FCM Reminder request sent for user {}", user.getEmail());
     }
 }

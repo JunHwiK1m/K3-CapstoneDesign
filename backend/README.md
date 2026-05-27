@@ -17,9 +17,10 @@ Leafy는 사용자의 일기(텍스트 및 멀티모달 데이터)를 분석하�
 
 ## 🛠 기술 스택
 
-- **Backend**: Java 21, Spring Boot 3.4.x, Spring Data JPA, Spring Security, OAuth 2.0
+- **Backend**: Java 21, Spring Boot 3.5.x, Spring Data JPA, Spring Security, OAuth 2.0
 - **Database**: PostgreSQL (Production/Dev), H2 (Local/Test)
-- **AI Integration**: OpenFeign (FastAPI 연동)
+- **AI Integration**: OpenFeign (FastAPI 연동, Timeout 120s)
+- **Storage**: Local File System (./uploads/), PostgreSQL
 - **Security**: JWT, AES-256 (일기 본문 암호화)
 - **Documentation**: SpringDoc OpenAPI (Swagger)
 
@@ -27,7 +28,10 @@ Leafy는 사용자의 일기(텍스트 및 멀티모달 데이터)를 분석하�
 
 ## ⚙️ 실행 환경 설정
 
-### 1. 환경 변수 설정 (`.env`)
+### 1. 사전 요구 사항
+- **AI 서버 실행**: 본 서비스는 감정 분석을 위해 별도의 FastAPI 서버가 필요합니다. `http://localhost:8000`에서 서버가 실행 중이어야 합니다.
+
+### 2. 환경 변수 설정 (`.env`)
 프로젝트 루트 디렉토리에 `.env` 파일을 생성하고 아래 내용을 환경에 맞게 입력하세요.
 
 ```env
@@ -52,11 +56,17 @@ ENCRYPTION_KEY=your_32_char_aes_key
 DEV_AI_SERVER_URL=http://localhost:8000
 ```
 
-### 2. 빌드 및 실행
+### 3. 빌드 및 실행
 ```bash
 ./gradlew clean build
 ./gradlew bootRun
 ```
+
+---
+
+## 📂 파일 저장 및 관리
+- **이미지 및 음성**: 사용자가 업로드한 파일은 서버 로컬의 `./uploads/` 디렉토리에 저장됩니다.
+- **URL 반환**: 파일 업로드 시 `http://localhost:8080/uploads/{UUID}.ext` 형식의 URL이 반환되며, 이 URL을 일기 작성 API의 `imageUrls` 또는 `voiceUrl` 필드에 포함하여 전송해야 합니다.
 
 ---
 

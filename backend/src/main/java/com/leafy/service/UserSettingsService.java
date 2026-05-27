@@ -63,6 +63,12 @@ public class UserSettingsService {
         settings.updateAiAnalysis(enabled);
     }
 
+    @Transactional
+    public void updateFcmToken(String email, String token) {
+        User user = findUserByEmail(email);
+        user.updateFcmToken(token);
+    }
+
     private User findUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
