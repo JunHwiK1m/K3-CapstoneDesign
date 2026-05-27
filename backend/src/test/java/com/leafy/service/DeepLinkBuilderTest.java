@@ -20,8 +20,8 @@ class DeepLinkBuilderTest {
         DeepLinkBuilder.DeepLinkPair result = deepLinkBuilder.build(RecommendationCategory.MUSIC, rawId);
 
         // Then
-        assertThat(result.deepLink()).isEqualTo("spotify:track:spotify123");
-        assertThat(result.fallbackUrl()).isEqualTo("https://open.spotify.com/track/spotify123");
+        assertThat(result.deepLink()).isEqualTo("spotify:playlist:spotify123");
+        assertThat(result.fallbackUrl()).isEqualTo("https://open.spotify.com/playlist/spotify123");
     }
 
     @Test

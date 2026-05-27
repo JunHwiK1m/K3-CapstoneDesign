@@ -50,6 +50,9 @@ public class User {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "fcm_token")
+    private String fcmToken;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
@@ -63,5 +66,9 @@ public class User {
     public User updateProfile(String name) {
         this.name = name;
         return this;
+    }
+
+    public void updateFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
     }
 }

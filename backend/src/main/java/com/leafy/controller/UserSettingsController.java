@@ -48,4 +48,13 @@ public class UserSettingsController {
         userSettingsService.updateAiAnalysisSetting(userDetails.getUsername(), enabled);
         return CommonResponse.success("AI 분석 설정 수정 성공", null);
     }
+
+    @Operation(summary = "FCM 토큰 업데이트", description = "푸시 알림 수신을 위한 FCM 토큰을 저장 또는 갱신합니다.")
+    @PatchMapping("/fcm-token")
+    public CommonResponse<Void> updateFcmToken(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam String token) {
+        userSettingsService.updateFcmToken(userDetails.getUsername(), token);
+        return CommonResponse.success("FCM 토큰이 업데이트되었습니다.", null);
+    }
 }

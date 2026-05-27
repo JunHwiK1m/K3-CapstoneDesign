@@ -21,6 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -51,8 +54,13 @@ public class JournalService {
 
         Journal savedJournal = journalRepository.save(journal);
         
-        // Trigger asynchronous analysis
-        asyncAnalysisService.analyzeJournal(savedJournal.getId());
+        // Trigger asynchronous analysis after the transaction has successfully committed
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncAnalysisService.analyzeJournal(savedJournal.getId());
+            }
+        });
         
         return savedJournal.getId();
     }

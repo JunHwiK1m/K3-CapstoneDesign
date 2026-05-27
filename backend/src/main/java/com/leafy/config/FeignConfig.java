@@ -18,11 +18,11 @@ public class FeignConfig {
 
     @Bean
     public Request.Options requestOptions() {
-        // Read Timeout: 60s (per Constitution and Analysis Report)
+        // Connect Timeout: 5s, Read Timeout: 120s (increased to handle complex AI analysis)
         return new Request.Options(
-                5000, TimeUnit.MILLISECONDS, // Connect Timeout: 5s
-                60000, TimeUnit.MILLISECONDS, // Read Timeout: 60s
-                true // followRedirects
+                5000, TimeUnit.MILLISECONDS,
+                120000, TimeUnit.MILLISECONDS,
+                true
         );
     }
 
