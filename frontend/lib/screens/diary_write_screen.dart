@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
 import 'analysis_loading_screen.dart';
+import 'records_screen.dart';
 
 class LinedPaperPainter extends CustomPainter {
   final Color lineColor;
@@ -41,6 +44,107 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
   String? _selectedImagePath;
   bool _isRecording = false;
   bool _isSubmitting = false;
+
+  late stt.SpeechToText _speechToText; // STT 객체
+  bool _isSpeechInitialized = false; // STT 초기화 상태
+  String _startText = ''; // 음성 인식 시작 시점의 텍스트 저장용
+
+  bool _isAiAnalysisEnabled = true; // AI 분석 동의 여부 상태
+
+  @override
+  void initState() {
+    super.initState();
+    _speechToText = stt.SpeechToText();
+    _initSpeech();
+    _fetchUserSettings(); // 설정 조회
+  }
+
+  // 백엔드에서 사용자 설정(AI 분석 동의 여부 등)을 불러옵니다.
+  Future<void> _fetchUserSettings() async {
+    try {
+      final token = widget.token.trim();
+      if (token.isEmpty) return;
+
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8080/api/users/settings'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        final data = body['data'];
+        if (data != null && mounted) {
+          setState(() {
+            _isAiAnalysisEnabled = data['isAiAnalysisEnabled'] ?? true;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching settings: $e");
+    }
+  }
+
+  // STT 초기화 및 권한 요청 (Korean comments)
+  void _initSpeech() async {
+    _isSpeechInitialized = await _speechToText.initialize(
+      onError: (error) => debugPrint('STT 에러: $error'),
+      onStatus: (status) {
+        debugPrint('STT 상태: $status');
+        // 사용자가 말을 멈추거나 타임아웃으로 인식이 종료되었을 때 UI 업데이트
+        if (status == 'done' || status == 'notListening') {
+          if (mounted) {
+            setState(() {
+              _isRecording = false;
+            });
+          }
+        }
+      },
+    );
+    setState(() {});
+  }
+
+  // 음성 인식 시작 및 중지 토글 (Korean comments)
+  void _toggleListening() async {
+    if (_speechToText.isNotListening) {
+      // 마이크 권한 확인
+      var status = await Permission.microphone.request();
+      if (status != PermissionStatus.granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('음성 인식을 위해 마이크 권한이 필요합니다.')),
+          );
+        }
+        return;
+      }
+
+      if (_isSpeechInitialized) {
+        setState(() {
+          _isRecording = true;
+          _startText = _contentController.text; // 현재 작성된 텍스트 저장
+        });
+        
+        // 음성 인식 시작 (Korean comments)
+        await _speechToText.listen(
+          onResult: (result) {
+            setState(() {
+              // 인식된 텍스트를 기존 텍스트 뒤에 실시간으로 이어붙임
+              final currentWords = result.recognizedWords;
+              _contentController.text = _startText.isEmpty ? currentWords : '$_startText $currentWords';
+              // 커서를 텍스트 맨 끝으로 이동
+              _contentController.selection = TextSelection.fromPosition(TextPosition(offset: _contentController.text.length));
+            });
+          },
+          localeId: 'ko_KR', // 한국어 설정
+        );
+      }
+    } else {
+      // 음성 인식 중지
+      await _speechToText.stop();
+      setState(() {
+        _isRecording = false;
+      });
+    }
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -87,10 +191,18 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const AnalysisLoadingScreen()),
-          );
+          // AI 분석 동의 여부에 따라 화면 이동 분기 처리
+          if (_isAiAnalysisEnabled) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const AnalysisLoadingScreen()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => RecordsScreen(token: widget.token)),
+            );
+          }
         }
       } else {
         if (mounted) {
@@ -292,8 +404,7 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
                         const Spacer(),
                         // Voice Record Button
                         GestureDetector(
-                          onLongPressStart: (_) => setState(() => _isRecording = true),
-                          onLongPressEnd: (_) => setState(() => _isRecording = false),
+                          onTap: _toggleListening,
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(

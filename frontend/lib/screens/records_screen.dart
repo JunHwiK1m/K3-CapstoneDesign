@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:http/http.dart' as http;
@@ -76,6 +77,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                 'analysisStatus': item['analysisStatus'] ?? 'PENDING',
                 'emotion': '🌱', // 기본값
                 'score': 0, // 기본값
+                'imgUrl': item['imgUrl'], // 이미지 URL 또는 경로 추가
               };
             }
             _isLoading = false;
@@ -114,6 +116,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
                       if (_diaries.containsKey(normalizedDate)) {
                         _diaries[normalizedDate]!['score'] = score;
                         _diaries[normalizedDate]!['emotion'] = emotionEmoji;
+                        if (detailData['imgUrl'] != null && detailData['imgUrl'].toString().isNotEmpty) {
+                          _diaries[normalizedDate]!['imgUrl'] = detailData['imgUrl'];
+                        }
                       }
                     });
                   }
@@ -310,11 +315,35 @@ class _RecordsScreenState extends State<RecordsScreen> {
           const SizedBox(height: 24),
           Expanded(
             child: SingleChildScrollView(
-              child: Text(
-                diary['content'],
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(height: 1.8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 첨부 이미지가 있는 경우 렌더링
+                  if (diary['imgUrl'] != null && diary['imgUrl'].toString().isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: diary['imgUrl'].toString().startsWith('http')
+                          ? Image.network(
+                              diary['imgUrl'],
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.file(
+                              File(diary['imgUrl']),
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  // 일기 본문 텍스트
+                  Text(
+                    diary['content'],
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.8),
+                  ),
+                ],
               ),
             ),
           ),
