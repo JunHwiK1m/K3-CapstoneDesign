@@ -1,7 +1,17 @@
 # Changelog
 
-## [2026-05-23]
+## [2026-05-26]
 ### Added / Changed
+- `frontend/android/app/src/main/AndroidManifest.xml` 파일 수정
+  - 음성 인식을 위한 마이크 접근 권한(`android.permission.RECORD_AUDIO`) 추가
+- `frontend/lib/screens/diary_write_screen.dart` 파일 수정
+  - `speech_to_text` 패키지를 사용한 일기 음성 입력(STT) 기능 추가
+  - 음성 입력 버튼을 탭하여 녹음을 시작 및 종료할 수 있도록 토글 방식으로 구현
+  - 일기 작성 후 사용자 설정(`isAiAnalysisEnabled`)을 확인하여 AI 분석 동의 시 '분석 화면(`AnalysisLoadingScreen`)'으로, 비동의 시 '일기 기록 화면(`RecordsScreen`)'으로 분기 이동하도록 내비게이션 로직 추가
+- `frontend/lib/screens/records_screen.dart` 파일 수정
+  - 일기 기록 화면 상세 카드에 사용자가 첨부한 이미지를 렌더링하도록 UI 추가 (`imgUrl` 연동)
+
+## [2026-05-23]
 - `backend/.env` 파일 생성
   - 로컬 환경 실행 시 발생하는 `jwtTokenProvider` 의존성 주입 에러 해결을 위해 환경 변수 파일 생성
 - `frontend/lib/screens/login_screen.dart` 파일 수정
