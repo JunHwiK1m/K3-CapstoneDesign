@@ -1,1 +1,122 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- Virtual Environments ---
+.venv/
+venv/
+ENV/
+env/
+pyvenv.cfg
+
+# --- Testing / Coverage ---
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.htmlcov/
+
+# --- Databases ---
+*.db
+*.sqlite3
+
+# --- IDEs / Editors ---
 .vscode/
+.vscode-server/
+.vscode-remote-containers/
+.idea/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/
+.sts4/
+.viminfo
+.antigravity-ide-server/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Project Specific ---
+*.log
+# Legacy Audio (Keep for safety during transition)
+temp_*.wav
+temp_*.mp3
+ai_voice.mp3
+
+# --- Environment Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Root/Home Directory Noise ---
+# Since git root is at /root, ignore home directory clutter
+/.aws/
+/.azure/
+/.bash_history
+/.bashrc
+/.config/
+/.copilot/
+/.docker/
+/.dotnet/
+/.gemini/
+/.gitconfig
+/.github/
+/.gradle/
+/.h2.server.properties
+/.java/
+/.local/
+/.m2/
+/.mcp-auth/
+/.motd_shown
+/.npm/
+/.nvm/
+/.pdfbox.cache
+/.profile
+/.redhat/
+/.ssh/
+/.stitch-mcp/
+/.wget-hsts/
+/.zshrc
+# /README.md  <-- 이 부분을 주석 처리하거나 삭제합니다.
+/changelog.md
+/docker-compose.yml
+/framework_dev-root/
+/gradle/
+/gradlew
+/gradlew.bat
+/snap/
+/testCollection/
+/build/
+
+# Allow our specific project folder
+!/dev-root/capStone/
