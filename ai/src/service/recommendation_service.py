@@ -46,7 +46,8 @@ class RecommendationService:
         response = self.client.chat.completions.create(
             model=ai_config.llm_model,
             messages=[{"role": "user", "content": system_prompt}],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            temperature=0.8
         )
         return response.choices[0].message.content
         
@@ -70,12 +71,6 @@ class RecommendationService:
             content = self._call_openai(system_prompt)
             result = json.loads(content)
             
-            # 후처리: FOOD 카테고리는 무조건 external_link를 null로
-            if "recommendations" in result:
-                for rec in result["recommendations"]:
-                    if rec.get("category") == "FOOD":
-                        rec["external_link"] = None
-                        
             return result
                 
         except Exception:
@@ -83,6 +78,20 @@ class RecommendationService:
             
     def _get_fallback_recommendations(self, categories: list, spotify_id: str) -> dict:
         """생성 실패 시 반환할 기본 추천 데이터"""
+        food_fallbacks = [
+            {"text": "따뜻하고 부드러운 죽이나 스프", "link": "죽"},
+            {"text": "기분 전환을 위한 달콤한 초콜릿 디저트", "link": "초콜릿"},
+            {"text": "스트레스 해소에 좋은 매콤한 음식", "link": "매운음식"}
+        ]
+        movie_fallbacks = [
+            {"text": "넷플릭스 영화: 어바웃 타임", "link": "70273658"},
+            {"text": "넷플릭스 영화: 인턴", "link": "80023873"},
+            {"text": "넷플릭스 영화: 리틀 포레스트", "link": "81013444"}
+        ]
+        
+        selected_food = random.choice(food_fallbacks)
+        selected_movie = random.choice(movie_fallbacks)
+
         fallbacks = {
             "MUSIC": {
                 "category": "MUSIC", 
@@ -91,13 +100,13 @@ class RecommendationService:
             },
             "FOOD": {
                 "category": "FOOD", 
-                "content_text": "따뜻하고 부드러운 음식",
-                "external_link": None
+                "content_text": selected_food["text"],
+                "external_link": selected_food["link"]
             },
             "MOVIE": {
                 "category": "MOVIE", 
-                "content_text": "넷플릭스 영화: 힐링 무비",
-                "external_link": "80209607"
+                "content_text": selected_movie["text"],
+                "external_link": selected_movie["link"]
             }
         }
         

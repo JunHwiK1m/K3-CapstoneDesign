@@ -1,14 +1,22 @@
 # Leafy AI Analysis Server (Python)
 
-본 서버는 Leafy 서비스의 핵심 AI 엔진으로, 사용자의 일기 내용과 Todo 성취도를 분석하여 맞춤형 케어 콘텐츠를 제공합니다.
+본 서버는 Leafy 서비스의 핵심 AI 엔진으로, 사용자의 일기 내용과 Todo 성취도를 분석하여 맞춤형 케어 콘텐츠를 제공합니다. 현재 **GPT-4o** 모델을 기반으로 최적화되어 있습니다.
 
 ---
 
-## 🔗 Backend Integration Guide (백엔드 연동 가이드)
+## 🔗 API Guide (API 연동 가이드)
 
-백엔드(Spring Boot)에서 AI 서버를 호출할 때 사용하는 API 명세입니다.
+### 1. [New] 사용자 응원 메시지 (Flutter 직접 호출용)
+- **Endpoint:** `GET /api/ai/daily-message`
+- **Description:** 사용자가 앱에 접속했을 때 출력할 수 있는 랜덤 응원 메시지를 반환합니다. 백엔드를 거치지 않고 직접 호출 가능합니다.
+- **Response Body (JSON):**
+  ```json
+  {
+    "message": "오늘 하루도 정말 수고 많으셨어요. 당신은 충분히 잘하고 있습니다."
+  }
+  ```
 
-### 1. 일기 감정 분석 및 추천
+### 2. 일기 감정 분석 및 추천
 - **Endpoint:** `POST /api/ai/journals`
 - **Description:** 사용자가 작성한 일기 내용을 분석하여 감정 점수(Joy, Sadness, Stress)와 추천 콘텐츠(Spotify, Movie, Food)를 반환합니다.
 - **Request Body (JSON):**
@@ -68,9 +76,9 @@
 ## 🛠️ 설치 및 실행
 
 ### 1. 환경 변수 설정
-`.env` 파일에 OpenAI API 키를 입력합니다.
+`.env` 파일에 API 정보를 입력합니다.
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_KEY=your_api_key_here
 ```
 
 ### 2. 패키지 설치 및 실행

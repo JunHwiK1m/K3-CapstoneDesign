@@ -27,7 +27,15 @@ class PromptFactory:
         if "MOVIE" in categories:
             link_instructions.append("- MOVIE: content_text는 '[플랫폼] 영화: [제목]' 형식으로 작성하고, external_link는 실제 해당 영화 플랫폼의 숫자형 ID(예: 70273658) 문자열만 반환해줘. 영문자 포함 불가.")
         if "FOOD" in categories:
-            link_instructions.append("- FOOD: external_link 필드는 반드시 null 로 반환해줘.")
+            food_guide = (
+                "- FOOD: 반드시 한국인에게 친밀하고 대중적인 메뉴를 추천하되, **다양성**을 최우선으로 고려해줘. "
+                "매번 똑같은 메뉴(떡볶이, 치킨)만 나오지 않도록 한식(국밥, 비빔밥, 찌개류), 중식(짜장면, 짬뽕), 일식(돈카츠, 초밥), 양식(버거, 샌드위치), 분식 등 넓은 범주에서 골라줘. "
+                "1. 사용자가 지치고 힘들다면: 배달하기 좋은 '든든하거나 자극적인 대중 음식'(예: 족발, 보쌈, 아구찜, 마라탕, 햄버거 세트 등)을 추천해줘. "
+                "2. 사용자가 여유롭고 활기차다면: 직접 가볍게 준비할 수 있는 '신선하거나 깔끔한 요리'(예: 월남쌈, 된장찌개와 나물, 카레라이스, 샌드위치, 샐러드 파스타 등)를 제안에 포함해줘. "
+                "**중요:** 기분이 좋더라도 축하하고 싶은 날이나 자신에게 보상을 주고 싶은 날엔 배달 음식을 추천할 수 있어. 상황에 가장 잘 어울리는 '대중적인 선택'을 해줘. "
+                "content_text는 상황에 맞는 다정한 권유형으로, external_link는 음식 이름만 작성할 것."
+            )
+            link_instructions.append(food_guide)
         
         link_guide = ""
         if link_instructions:
@@ -47,9 +55,9 @@ class PromptFactory:
             if cat == "MUSIC":
                 example_items.append(f"{{\"category\": \"MUSIC\", \"content_text\": \"{spotify_title or '플레이리스트 이름'}\", \"external_link\": \"{spotify_id or '37i9dQZF1DXcBWIGoYBM3M'}\"}}")
             elif cat == "MOVIE":
-                example_items.append(f"{{\"category\": \"MOVIE\", \"content_text\": \"넷플릭스 영화: 어바웃 타임\", \"external_link\": \"70273658\"}}")
+                example_items.append(f"{{\"category\": \"MOVIE\", \"content_text\": \"[플랫폼] 영화: [영화제목]\", \"external_link\": \"[플랫폼ID]\"}}")
             elif cat == "FOOD":
-                example_items.append(f"{{\"category\": \"FOOD\", \"content_text\": \"따뜻한 코코아\", \"external_link\": null}}")
+                example_items.append(f"{{\"category\": \"FOOD\", \"content_text\": \"오늘은 [추천 이유]를 위해 [음식명] 어때요?\", \"external_link\": \"[음식명]\"}}")
             else:
                 example_items.append(f"{{\"category\": \"{cat}\", \"content_text\": \"추천 내용\"}}")
         example_json = ",\n    ".join(example_items)
