@@ -52,6 +52,9 @@ spring:
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
 
+server:
+  port: ${PORT:8080}
+
 # AI Server Configuration
 ai:
   server:
