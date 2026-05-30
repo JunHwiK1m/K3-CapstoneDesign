@@ -1,16 +1,14 @@
 # capStone 프로젝트 지침 (GEMINI.md)
 ## 📌 현재 진행 상황
 - **기능 명칭:** 능동형 AI 감정 케어 에이전트 (AI 분석 서버)
-- **현재 상태:** **구현 완료 및 통합 테스트 통과 (REST API 서버)**
+- **현재 상태:** **최종 구현 완료 및 검증 통과 (GPT-4o 기반 유지)**
 - **시스템 정보:** Linux + Python 3.12.3 + FastAPI 기반 API 서버
 - **완료된 작업:**
-  - [x] OpenAI GPT-4o 기반 감정 분석 및 추천 로직 고도화
-  - [x] Spring Boot 백엔드 연동을 위한 REST API Endpoint (`/analyze-journal`, `/todo-feedback`) 구현
-  - [x] Spotify 플레이리스트 ID Pool 기반 추천 로직 (실제 링크 일치화 완료)
-  - [x] Todo 성취도 및 감정 상태 결합 피드백 엔진 구축
-  - [x] 인프라 강화: Rate Limiting(120 RPM), Tenacity 재시도, JSON 로깅(마스킹 적용)
-  - [x] TDD 실천: 모든 엔드포인트 및 로직에 대한 단위/통합 테스트 완료
-  - [x] 레거시 정리: Phase 2 음성 처리(STT/TTS) 코드 완전 삭제
+  - [x] **안정성 확보**: Gemma-4 모델 연동 테스트 후, 안정성을 위해 기존 **GPT-4o** 모델 체제 유지
+  - [x] **신규 기능**: Flutter 앱 직접 연동을 위한 `/api/ai/daily-message` (응원 메시지) 추가
+  - [x] **API 구조**: 백엔드 연동용 `/api/ai/journals`, `/api/ai/todos/feedback` 통합 및 최적화
+  - [x] **안정성**: 지수적 백오프, Rate Limiting, JSON 로깅 및 마스킹 적용 유지
+  - [x] **문서화**: README.md 및 .specify 기술 명세서 최신화 완료
 
 ## 🤖 Gemini CLI 참조 지침
 1. **최우선 참조 디렉토리:**

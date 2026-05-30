@@ -56,6 +56,9 @@ class TodoFeedbackRequest(BaseSchema):
 class TodoFeedbackResponse(BaseSchema):
     feedback_message: str
 
+class DailyMessageResponse(BaseSchema):
+    message: str
+
 class ErrorResponse(BaseSchema):
     status: str = "ERROR"
     message: str
