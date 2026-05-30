@@ -19,7 +19,7 @@ public class DeepLinkBuilder {
                     "https://open.spotify.com/playlist/" + rawId
             );
             case FOOD -> DeepLinkPair.of(
-                    "baemin://restaurant?id=" + rawId, // 예시 스킴
+                    "smartbaemin://search?keyword=" + rawId,
                     "https://www.baemin.com/"
             );
             case MOVIE -> DeepLinkPair.of(

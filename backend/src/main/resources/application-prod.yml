@@ -12,3 +12,10 @@ spring:
 ai:
   server:
     url: ${PROD_AI_SERVER_URL}
+
+app:
+  storage:
+    local-path: ${PROD_STORAGE_PATH:/data/uploads/}
+    base-url: ${PROD_APP_BASE_URL}/uploads/
+
+

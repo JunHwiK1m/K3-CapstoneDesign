@@ -84,17 +84,30 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// QueryDSL Generated Directory
-def querydslDir = layout.buildDirectory.dir("generated/querydsl").get().asFile
-
-sourceSets {
-    main.java.srcDirs += [ querydslDir ]
+jar {
+    enabled = false
 }
 
-tasks.withType(JavaCompile).configureEach {
+bootJar {
+    archiveFileName = 'app.jar'
+}
+
+// QueryDSL Generated Directory
+def querydslDir = layout.buildDirectory.dir("generated/querydsl")
+
+sourceSets {
+    main {
+        java {
+            srcDirs += querydslDir
+        }
+    }
+}
+
+tasks.named('compileJava') {
     options.getGeneratedSourceOutputDirectory().set(querydslDir)
 }
 
 clean.doLast {
     delete querydslDir
 }
+

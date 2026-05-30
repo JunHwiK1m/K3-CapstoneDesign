@@ -34,7 +34,7 @@ class DeepLinkBuilderTest {
         DeepLinkBuilder.DeepLinkPair result = deepLinkBuilder.build(RecommendationCategory.FOOD, rawId);
 
         // Then
-        assertThat(result.deepLink()).isEqualTo("baemin://restaurant?id=rest456");
+        assertThat(result.deepLink()).isEqualTo("smartbaemin://search?keyword=rest456");
         assertThat(result.fallbackUrl()).isEqualTo("https://www.baemin.com/");
     }
 }
