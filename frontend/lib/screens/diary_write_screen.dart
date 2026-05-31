@@ -174,9 +174,30 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
 
     try {
       final token = widget.token.trim();
+      String uploadedImgUrl = "";
+
+      // 1. Upload image if selected
+      if (_selectedImagePath != null && _selectedImagePath!.isNotEmpty) {
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('http://10.0.2.2:8080/api/files/upload'),
+        );
+        request.headers['Authorization'] = 'Bearer $token';
+        request.files.add(await http.MultipartFile.fromPath('file', _selectedImagePath!));
+        
+        var uploadRes = await request.send();
+        if (uploadRes.statusCode >= 200 && uploadRes.statusCode < 300) {
+          final respStr = await uploadRes.stream.bytesToString();
+          final uploadBody = jsonDecode(respStr);
+          uploadedImgUrl = uploadBody['data']?.toString() ?? "";
+        } else {
+          debugPrint("Image upload failed: ${uploadRes.statusCode}");
+        }
+      }
+
       final payload = {
         "content": content,
-        "imgUrl": _selectedImagePath ?? "",
+        "imageUrls": uploadedImgUrl.isNotEmpty ? [uploadedImgUrl] : [],
         "voiceUrl": "",
       };
 
@@ -190,12 +211,22 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
       );
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        final int journalId = body['data'] is int 
+            ? body['data'] 
+            : int.tryParse(body['data'].toString()) ?? 0;
+
         if (mounted) {
           // AI 분석 동의 여부에 따라 화면 이동 분기 처리
-          if (_isAiAnalysisEnabled) {
+          if (_isAiAnalysisEnabled && journalId > 0) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const AnalysisLoadingScreen()),
+              MaterialPageRoute(
+                builder: (context) => AnalysisLoadingScreen(
+                  token: widget.token,
+                  journalId: journalId,
+                ),
+              ),
             );
           } else {
             Navigator.pushReplacement(

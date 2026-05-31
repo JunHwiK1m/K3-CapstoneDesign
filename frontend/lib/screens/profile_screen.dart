@@ -22,23 +22,15 @@ class _ProfileScreenState extends State<ProfileScreen>
   final Map<String, List<Map<String, dynamic>>> _ownedItems = {
     '일기장': [
       {'name': '기본 일기장', 'isApplied': true, 'icon': Icons.book},
-      {'name': '밤하늘 일기장', 'isApplied': false, 'icon': Icons.nightlight_round},
-      {'name': '벚꽃 일기장', 'isApplied': false, 'icon': Icons.local_florist},
     ],
     '폰트': [
       {'name': '기본 고딕', 'isApplied': true, 'icon': Icons.font_download},
-      {'name': '손글씨체', 'isApplied': false, 'icon': Icons.draw},
-      {'name': '타자기체', 'isApplied': false, 'icon': Icons.keyboard},
     ],
     '테마': [
       {'name': '따뜻한 베이지', 'isApplied': true, 'icon': Icons.palette},
-      {'name': '다크 모드', 'isApplied': false, 'icon': Icons.dark_mode},
-      {'name': '파스텔 핑크', 'isApplied': false, 'icon': Icons.format_paint},
     ],
     '캐릭터': [
       {'name': '기본 강아지', 'isApplied': true, 'icon': Icons.pets},
-      {'name': '안경 쓴 고양이', 'isApplied': false, 'icon': Icons.smart_toy},
-      {'name': '마법사 토끼', 'isApplied': false, 'icon': Icons.auto_fix_high},
     ],
   };
 
@@ -47,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.initState();
     _tabController = TabController(length: _categories.length, vsync: this);
     _fetchProfileData();
+    _fetchMyItems();
   }
 
   Future<void> _fetchProfileData() async {
@@ -89,6 +82,58 @@ class _ProfileScreenState extends State<ProfileScreen>
           _nickname = "오류 발생";
           _isLoading = false;
         });
+    }
+  }
+
+  Future<void> _fetchMyItems() async {
+    final token = widget.token.trim();
+    if (token.isEmpty) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://10.0.2.2:8080/api/items/my'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(utf8.decode(response.bodyBytes));
+        final List<dynamic> data = body['data'] ?? [];
+        if (mounted) {
+          setState(() {
+            for (var item in data) {
+              final String itemType = item['itemType'] ?? '';
+              final String itemName = item['itemName'] ?? '이름 없음';
+              final bool isEquipped = item['isEquipped'] ?? false;
+
+              String category = '';
+              IconData icon = Icons.star;
+
+              if (itemType == 'PERSONA') {
+                category = '캐릭터';
+                icon = Icons.pets;
+              } else if (itemType == 'THEME') {
+                category = '테마';
+                icon = Icons.palette;
+              } else {
+                continue; // 지원하지 않는 타입은 건너뜀
+              }
+
+              // 기존 목록에 같은 이름이 있는지 확인하여 중복 추가 방지
+              bool exists = _ownedItems[category]!.any((element) => element['name'] == itemName);
+              if (!exists) {
+                _ownedItems[category]!.add({
+                  'name': itemName,
+                  'isApplied': isEquipped,
+                  'icon': icon,
+                  'userItemId': item['userItemId'], // 필요 시 활용 가능
+                });
+              }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching my items: $e");
     }
   }
 

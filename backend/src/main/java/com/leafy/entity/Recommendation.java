@@ -32,6 +32,7 @@ public class Recommendation {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "journal_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Journal journal;
 
     @Enumerated(EnumType.STRING)

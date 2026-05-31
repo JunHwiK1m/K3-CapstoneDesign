@@ -21,6 +21,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
   int _completedCount = 0;
   int _totalCount = 0;
   bool _isLoading = true;
+  String _feedbackMessage = '오늘 하루도 화이팅! 🌱';
 
   final TextEditingController _todoController = TextEditingController();
   late final TextEditingController _tempTokenController;
@@ -84,6 +85,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
             _totalCount = data['totalCount'] ?? 0;
             _completedCount = data['completedCount'] ?? 0;
             _successRate = data['completionRate']?.toDouble() ?? 0.0;
+            _feedbackMessage = data['feedbackMessage'] ?? '오늘 하루도 화이팅! 🌱';
           });
         }
       }
@@ -261,7 +263,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                       ),
                     ),
                     child: Text(
-                      '안녕! 오늘도 활기찬 하루 보내고 있니?\n내가 널 항상 응원하고 있어 ✨',
+                      _feedbackMessage,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
@@ -545,7 +547,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const StoreScreen(),
+                        builder: (context) => StoreScreen(token: _tempTokenController.text),
                       ),
                     );
                   });
