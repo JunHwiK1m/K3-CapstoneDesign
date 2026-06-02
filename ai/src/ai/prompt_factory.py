@@ -2,6 +2,16 @@ class PromptFactory:
     """사용자 설정 및 상황에 맞는 AI 프롬프트를 생성하는 팩토리 클래스"""
     
     @staticmethod
+    def get_tone_guide(advice_tone: str) -> str:
+        tone_guide = {
+            "INFORMAL": "친구처럼 친근하게 반말로 얘기해줘. '힘내' 같은 말보다는 일기 내용 중 공감 가는 부분을 콕 짚어서 말해줘.",
+            "FORMAL": "따뜻하고 정중한 존댓말로 조언해줘. 사용자의 아픔을 충분히 이해하고 있다는 느낌을 주는 것이 중요해.",
+            "FRIENDLY": "다정하고 따뜻하게 위로해줘. 사용자가 스스로를 한심하게 느끼지 않도록 자존감을 높여주는 말을 해줘.",
+            "STRICT": "차분하고 객관적인 태도로 조언해줘. 현재 상황에서 작은 해결책부터 찾을 수 있게 도와줘."
+        }
+        return tone_guide.get(advice_tone, tone_guide["FRIENDLY"])
+
+    @staticmethod
     def create_recommendation_prompt(user_settings: dict, emotion_data: dict, diary_content: str, categories: list, todo_rate: float, spotify_id: str = None, spotify_title: str = None) -> str:
         """사용자의 일기 내용과 선택된 카테고리를 반영하는 프롬프트를 생성한다."""
         advice_tone = user_settings.get("advice_tone", "FRIENDLY")
@@ -12,14 +22,7 @@ class PromptFactory:
         # 선택된 카테고리 설명 생성
         category_list_str = ", ".join(categories)
         
-        tone_guide = {
-            "INFORMAL": "친구처럼 친근하게 반말로 얘기해줘. '힘내' 같은 말보다는 일기 내용 중 공감 가는 부분을 콕 짚어서 말해줘.",
-            "FORMAL": "따뜻하고 정중한 존댓말로 조언해줘. 사용자의 아픔을 충분히 이해하고 있다는 느낌을 주는 것이 중요해.",
-            "FRIENDLY": "다정하고 따뜻하게 위로해줘. 사용자가 스스로를 한심하게 느끼지 않도록 자존감을 높여주는 말을 해줘.",
-            "STRICT": "차분하고 객관적인 태도로 조언해줘. 현재 상황에서 작은 해결책부터 찾을 수 있게 도와줘."
-        }
-        
-        guide = tone_guide.get(advice_tone, tone_guide["FRIENDLY"])
+        guide = PromptFactory.get_tone_guide(advice_tone)
         
         link_instructions = []
         if "MUSIC" in categories:

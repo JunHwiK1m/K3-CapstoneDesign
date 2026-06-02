@@ -23,3 +23,5 @@ plugins {
 }
 
 include(":app")
+include(":spotify-app-remote")
+project(":spotify-app-remote").projectDir = java.io.File(rootProject.projectDir, "app/libs/spotify-app-remote")

@@ -2,6 +2,7 @@ import json
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential
 from src.config.ai_config import ai_config
+from src.ai.prompt_factory import PromptFactory
 
 class EmotionAnalyzer:
     """텍스트를 분석하여 감정 지표와 요약문을 산출하는 서비스"""
@@ -21,12 +22,15 @@ class EmotionAnalyzer:
         )
         return response.choices[0].message.content
 
-    def analyze(self, text: str) -> dict:
+    def analyze(self, text: str, persona_style: str = "FRIENDLY") -> dict:
         """OpenAI 모델을 호출하여 감정을 분석한다."""
         prompt_guide = ai_config.get_prompt_guide()
+        tone_guide = PromptFactory.get_tone_guide(persona_style)
+        
         system_prompt = (
             f"당신은 유능한 감정 분석 에이전트입니다. 다음 지침에 따라 JSON 형식으로만 응답하십시오.\n"
             f"지침: {prompt_guide}\n"
+            f"말투 지침: emotion_summary 작성 시 다음을 따르세요: {tone_guide}\n"
             "응답 예시: {\"joy_score\": 0.5, \"sadness_score\": 0.2, \"stress_level\": 0.3, \"emotion_summary\": \"사용자의 상황을 2줄 이내로 요약한 문장\"}"
         )
         

@@ -99,9 +99,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
               if (detailRes.statusCode == 200) {
                 final detailBody = jsonDecode(utf8.decode(detailRes.bodyBytes));
                 final detailData = detailBody['data'];
-                if (detailData != null && detailData['emotion'] != null) {
+                if (detailData != null && detailData['emotionResult'] != null) {
                   final double joyScore =
-                      (detailData['emotion']['joyScore'] ?? 0.0).toDouble();
+                      (detailData['emotionResult']['joyScore'] ?? 0.0).toDouble();
                   int score = (joyScore * 100).toInt();
                   String emotionEmoji = '🌱';
                   if (joyScore >= 0.7)

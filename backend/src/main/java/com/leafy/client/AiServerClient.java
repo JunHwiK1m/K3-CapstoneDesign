@@ -15,12 +15,12 @@ public interface AiServerClient {
     /**
      * 감정 분석과 추천 활동을 한 번의 호출로 모두 받아옵니다.
      */
-    @PostMapping("/analyze/full")
+    @PostMapping("/api/ai/journals")
     FullAnalysisResponse analyzeFull(@RequestBody EmotionAnalysisRequest request);
 
     /**
      * Todo 성취도에 대한 맞춤형 피드백을 받아옵니다.
      */
-    @PostMapping("/analyze/todo")
+    @PostMapping("/api/ai/todos/feedback")
     TodoAnalysisResponse analyzeTodo(@RequestBody TodoAnalysisRequest request);
 }

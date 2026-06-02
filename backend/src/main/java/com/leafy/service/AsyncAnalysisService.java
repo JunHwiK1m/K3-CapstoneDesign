@@ -10,6 +10,7 @@ import com.leafy.entity.PersonaStyle;
 import com.leafy.repository.EmotionRepository;
 import com.leafy.repository.JournalRepository;
 import com.leafy.repository.UserSettingsRepository;
+import com.leafy.util.AESUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -26,6 +27,7 @@ public class AsyncAnalysisService {
     private final EmotionRepository emotionRepository;
     private final UserSettingsRepository userSettingsRepository;
     private final RecommendationService recommendationService;
+    private final AESUtil aesUtil;
 
     @Async
     @Transactional
@@ -43,9 +45,12 @@ public class AsyncAnalysisService {
                     .map(s -> s.getPersonaStyle().name())
                     .orElse(PersonaStyle.BASIC.name());
 
+            // DB에 저장된 암호화된 일기 내용을 AI 분석을 위해 복호화합니다.
+            String decryptedContent = aesUtil.decrypt(journal.getContent());
+
             EmotionAnalysisRequest request = EmotionAnalysisRequest.builder()
                     .journalId(journal.getId())
-                    .content(journal.getContent())
+                    .content(decryptedContent)
                     .voiceUrl(journal.getVoiceUrl())
                     .personaStyle(personaStyle)
                     .build();

@@ -18,7 +18,7 @@ class Orchestrator:
         """일기 분석 파이프라인 (STT 로직 제거됨)"""
         try:
             # 1. 감정 분석
-            emotion_result = self.emotion_analyzer.analyze(content)
+            emotion_result = self.emotion_analyzer.analyze(content, persona_style)
             
             # 2. 추천 및 피드백 생성
             # 백엔드 연동을 위해 임시로 Todo 및 UserSettings 구성
