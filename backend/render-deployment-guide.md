@@ -1,6 +1,6 @@
-# Render Deployment Guide for Leafy Backend 🌿
+# Render Deployment Guide for Narae Backend 🌿
 
-이 문서는 Render에 Leafy 백엔드 서버를 배포하기 위한 설정 및 환경 변수 가이드를 제공합니다.
+이 문서는 Render에 Narae 백엔드 서버를 배포하기 위한 설정 및 환경 변수 가이드를 제공합니다.
 
 ## 1. 배포 설정 (Render Dashboard)
 
@@ -19,13 +19,13 @@ Render의 **Environment** 탭에서 아래 변수들을 추가하세요.
 | :--- | :--- | :--- |
 | `SPRING_PROFILES_ACTIVE` | 활성 프로파일 (운영 환경이므로 `prod`) | `prod` |
 | `PROD_DB_URL` | PostgreSQL 연결 URL (JDBC 형식) | `jdbc:postgresql://<host>:<port>/<db>` |
-| `PROD_DB_USERNAME` | 데이터베이스 사용자명 | `leafy_user` |
+| `PROD_DB_USERNAME` | 데이터베이스 사용자명 | `narae_user` |
 | `PROD_DB_PASSWORD` | 데이터베이스 비밀번호 | `your_password` |
 | `JWT_SECRET` | JWT 서명용 비밀키 (최소 32자 이상 권장) | `your_long_and_secure_jwt_secret_key` |
 | `ENCRYPTION_KEY` | 일기 본문 암호화용 AES 키 (16, 24, 32자) | `your-32-character-aes-key-here` |
-| `PROD_AI_SERVER_URL` | 배포된 AI (FastAPI) 서버 URL | `https://leafy-ai.onrender.com` |
-| `PROD_APP_BASE_URL` | 현재 백엔드 서버의 공개 URL | `https://leafy-backend.onrender.com` |
-| `APP_OAUTH2_REDIRECT_URI` | 소셜 로그인 성공 후 리다이렉트될 프론트엔드 주소 | `https://leafy-web.onrender.com/login-success` |
+| `PROD_AI_SERVER_URL` | 배포된 AI (FastAPI) 서버 URL | `https://narae-ai.onrender.com` |
+| `PROD_APP_BASE_URL` | 현재 백엔드 서버의 공개 URL | `https://narae-backend.onrender.com` |
+| `APP_OAUTH2_REDIRECT_URI` | 소셜 로그인 성공 후 리다이렉트될 프론트엔드 주소 | `https://narae-web.onrender.com/login-success` |
 | `GOOGLE_CLIENT_ID` | 구글 OAuth2 클라이언트 ID | `...apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | 구글 OAuth2 클라이언트 보안 비밀번호 | `...` |
 | `NAVER_CLIENT_ID` | 네이버 OAuth2 클라이언트 ID | `...` |
@@ -38,7 +38,7 @@ Render의 **Environment** 탭에서 아래 변수들을 추가하세요.
 사용자가 업로드한 이미지와 음성 파일을 유지하려면 Render의 **Disk** 기능을 사용하는 것이 좋습니다.
 
 - **Mount Path**: `/data/uploads`
-- **Name**: `leafy-uploads`
+- **Name**: `narae-uploads`
 - **Size**: 1GB (무료 티어 이상 필요)
 
 **환경 변수 추가**:

@@ -1,6 +1,6 @@
-# Leafy Backend API Documentation
+# Narae Backend API Documentation
 
-이 문서는 Leafy 백엔드 서버에 구현된 모든 REST API 명세를 제공합니다.
+이 문서는 Narae 백엔드 서버에 구현된 모든 REST API 명세를 제공합니다.
 모든 API 응답은 `CommonResponse<T>` 형식으로 래핑되어 반환됩니다 (단, `/health` 및 `/login-success` 제외).
 
 ## 응답 공통 포맷
@@ -22,7 +22,7 @@
 - **Response Example**:
 ```json
 {
-  "message": "Leafy Backend Server is running",
+  "message": "Narae Backend Server is running",
   "status": "UP",
   "timestamp": 1716796800000
 }

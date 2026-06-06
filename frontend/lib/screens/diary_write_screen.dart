@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../config.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -40,8 +41,8 @@ class DiaryWriteScreen extends StatefulWidget {
 class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
   final TextEditingController _contentController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
-  
-  String? _selectedImagePath;
+
+  List<String> _selectedImagePaths = [];
   bool _isRecording = false;
   bool _isSubmitting = false;
 
@@ -66,7 +67,7 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
       if (token.isEmpty) return;
 
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8080/api/users/settings'),
+        Uri.parse('${ApiConfig.baseUrl}/api/users/settings'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -122,16 +123,20 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
           _isRecording = true;
           _startText = _contentController.text; // 현재 작성된 텍스트 저장
         });
-        
+
         // 음성 인식 시작 (Korean comments)
         await _speechToText.listen(
           onResult: (result) {
             setState(() {
               // 인식된 텍스트를 기존 텍스트 뒤에 실시간으로 이어붙임
               final currentWords = result.recognizedWords;
-              _contentController.text = _startText.isEmpty ? currentWords : '$_startText $currentWords';
+              _contentController.text = _startText.isEmpty
+                  ? currentWords
+                  : '$_startText $currentWords';
               // 커서를 텍스트 맨 끝으로 이동
-              _contentController.selection = TextSelection.fromPosition(TextPosition(offset: _contentController.text.length));
+              _contentController.selection = TextSelection.fromPosition(
+                TextPosition(offset: _contentController.text.length),
+              );
             });
           },
           localeId: 'ko_KR', // 한국어 설정
@@ -148,11 +153,21 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
 
   Future<void> _pickImage() async {
     try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
+      final List<XFile> images = await _picker.pickMultiImage(imageQuality: 70);
+      if (images.isNotEmpty) {
         setState(() {
-          _selectedImagePath = image.path;
+          for (var image in images) {
+            if (_selectedImagePaths.length < 3) {
+              _selectedImagePaths.add(image.path);
+            }
+          }
         });
+
+        if (_selectedImagePaths.length > 3 && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('이미지는 최대 3장까지만 첨부할 수 있습니다.')),
+          );
+        }
       }
     } catch (e) {
       debugPrint("Error picking image: $e");
@@ -162,9 +177,9 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
   Future<void> _submit() async {
     final content = _contentController.text.trim();
     if (content.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('일기 내용을 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('일기 내용을 입력해주세요.')));
       return;
     }
 
@@ -174,35 +189,55 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
 
     try {
       final token = widget.token.trim();
-      String uploadedImgUrl = "";
+      List<String> uploadedImgUrls = [];
 
-      // 1. Upload image if selected
-      if (_selectedImagePath != null && _selectedImagePath!.isNotEmpty) {
+      // 1. Upload images if selected
+      if (_selectedImagePaths.isNotEmpty) {
         var request = http.MultipartRequest(
           'POST',
-          Uri.parse('http://10.0.2.2:8080/api/files/upload'),
+          Uri.parse('${ApiConfig.baseUrl}/api/files/upload-multiple'),
         );
         request.headers['Authorization'] = 'Bearer $token';
-        request.files.add(await http.MultipartFile.fromPath('file', _selectedImagePath!));
-        
+
+        for (String path in _selectedImagePaths) {
+          request.files.add(await http.MultipartFile.fromPath('files', path));
+        }
+
         var uploadRes = await request.send();
         if (uploadRes.statusCode >= 200 && uploadRes.statusCode < 300) {
           final respStr = await uploadRes.stream.bytesToString();
           final uploadBody = jsonDecode(respStr);
-          uploadedImgUrl = uploadBody['data']?.toString() ?? "";
+          final data = uploadBody['data'];
+          if (data is List) {
+            uploadedImgUrls = data.map((e) => e.toString()).toList();
+          }
         } else {
-          debugPrint("Image upload failed: ${uploadRes.statusCode}");
+          final errStr = await uploadRes.stream.bytesToString();
+          debugPrint("Image upload failed: ${uploadRes.statusCode} - $errStr");
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '이미지 업로드에 실패했습니다. 다시 시도해주세요. (${uploadRes.statusCode})',
+                ),
+              ),
+            );
+            setState(() {
+              _isSubmitting = false;
+            });
+          }
+          return; // 업로드 실패 시 일기 저장도 중단
         }
       }
 
       final payload = {
         "content": content,
-        "imageUrls": uploadedImgUrl.isNotEmpty ? [uploadedImgUrl] : [],
+        "imageUrls": uploadedImgUrls,
         "voiceUrl": "",
       };
 
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:8080/api/journals'),
+        Uri.parse('${ApiConfig.baseUrl}/api/journals'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -212,8 +247,8 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final body = jsonDecode(utf8.decode(response.bodyBytes));
-        final int journalId = body['data'] is int 
-            ? body['data'] 
+        final int journalId = body['data'] is int
+            ? body['data']
             : int.tryParse(body['data'].toString()) ?? 0;
 
         if (mounted) {
@@ -231,7 +266,9 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
           } else {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => RecordsScreen(token: widget.token)),
+              MaterialPageRoute(
+                builder: (context) => RecordsScreen(token: widget.token),
+              ),
             );
           }
         }
@@ -248,9 +285,9 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
     } catch (e) {
       debugPrint("Error submitting journal: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('오류가 발생했습니다. 다시 시도해주세요.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('오류가 발생했습니다. 다시 시도해주세요.')));
         setState(() {
           _isSubmitting = false;
         });
@@ -273,13 +310,13 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         actions: [
-          _isSubmitting 
+          _isSubmitting
               ? const Padding(
                   padding: EdgeInsets.only(right: 16.0),
                   child: Center(
                     child: SizedBox(
-                      width: 20, 
-                      height: 20, 
+                      width: 20,
+                      height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   ),
@@ -317,7 +354,9 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
                         width: 14,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.secondary.withOpacity(0.5),
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -350,7 +389,9 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
                 Expanded(
                   child: CustomPaint(
                     painter: LinedPaperPainter(
-                      lineColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                      lineColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.15),
                       lineHeight: 36.0,
                     ),
                     child: TextField(
@@ -359,13 +400,13 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
                       keyboardType: TextInputType.multiline,
                       decoration: const InputDecoration(
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
                         hintText: '오늘 하루는 어땠나요?',
                       ),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        height: 36.0 / 16.0, 
-                      ),
+                      style: const TextStyle(fontSize: 16, height: 36.0 / 16.0),
                       strutStyle: const StrutStyle(
                         fontSize: 16,
                         height: 36.0 / 16.0,
@@ -376,11 +417,18 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
                 ),
                 // Bottom Toolbar
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surfaceContainer,
                     border: Border(
-                      top: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
+                      top: BorderSide(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.1),
+                      ),
                     ),
                   ),
                   child: SafeArea(
@@ -392,45 +440,66 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
                           color: Theme.of(context).colorScheme.primary,
                           onPressed: _pickImage,
                         ),
-                        if (_selectedImagePath != null)
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                margin: const EdgeInsets.only(left: 8),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  image: DecorationImage(
-                                    image: FileImage(File(_selectedImagePath!)),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
+                        if (_selectedImagePaths.isNotEmpty)
+                          Expanded(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: _selectedImagePaths
+                                    .asMap()
+                                    .entries
+                                    .map((entry) {
+                                      int index = entry.key;
+                                      String path = entry.value;
+                                      return Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            margin: const EdgeInsets.only(
+                                              left: 8,
+                                              top: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              image: DecorationImage(
+                                                image: FileImage(File(path)),
+                                                fit: BoxFit.cover,
+                                              ),
+                                            ),
+                                          ),
+                                          Positioned(
+                                            top: 0,
+                                            right: -8,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _selectedImagePaths.removeAt(
+                                                    index,
+                                                  );
+                                                });
+                                              },
+                                              child: Container(
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.red,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.close,
+                                                  color: Colors.white,
+                                                  size: 16,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    })
+                                    .toList(),
                               ),
-                              Positioned(
-                                top: -8,
-                                right: -8,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedImagePath = null;
-                                    });
-                                  },
-                                  child: Container(
-                                    decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 16,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         const Spacer(),
                         // Voice Record Button
@@ -439,9 +508,11 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: _isRecording 
+                              color: _isRecording
                                   ? Theme.of(context).colorScheme.secondary
-                                  : Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.primary.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -462,4 +533,3 @@ class _DiaryWriteScreenState extends State<DiaryWriteScreen> {
     );
   }
 }
-

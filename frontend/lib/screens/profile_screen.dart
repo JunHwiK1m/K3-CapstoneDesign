@@ -1,6 +1,9 @@
 import 'dart:convert';
+import '../config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String token;
@@ -30,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       {'name': '따뜻한 베이지', 'isApplied': true, 'icon': Icons.palette},
     ],
     '캐릭터': [
-      {'name': '기본 강아지', 'isApplied': true, 'icon': Icons.pets},
+      {'name': '기본 나래', 'isApplied': true, 'icon': Icons.emoji_nature},
     ],
   };
 
@@ -55,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8080/api/users/settings'),
+        Uri.parse('${ApiConfig.baseUrl}/api/users/settings'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -91,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8080/api/items/my'),
+        Uri.parse('${ApiConfig.baseUrl}/api/items/my'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -110,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               if (itemType == 'PERSONA') {
                 category = '캐릭터';
-                icon = Icons.pets;
+                icon = Icons.emoji_nature;
               } else if (itemType == 'THEME') {
                 category = '테마';
                 icon = Icons.palette;
@@ -125,8 +128,24 @@ class _ProfileScreenState extends State<ProfileScreen>
                   'name': itemName,
                   'isApplied': isEquipped,
                   'icon': icon,
-                  'userItemId': item['userItemId'], // 필요 시 활용 가능
+                  'userItemId': item['userItemId'], // DB 아이템의 ID
                 });
+              } else if (isEquipped) {
+                // 이미 존재하는 아이템이라면 상태만 갱신 (만약 DB에 중복이 있다면)
+                final idx = _ownedItems[category]!.indexWhere((e) => e['name'] == itemName);
+                if (idx != -1) {
+                  _ownedItems[category]![idx]['isApplied'] = true;
+                  _ownedItems[category]![idx]['userItemId'] = item['userItemId'];
+                }
+              }
+
+              // 만약 DB에서 가져온 아이템이 장착 상태라면, 기본 아이템(userItemId가 없는 것)의 장착 상태를 해제
+              if (isEquipped) {
+                for (int i = 0; i < _ownedItems[category]!.length; i++) {
+                  if (_ownedItems[category]![i]['userItemId'] == null || _ownedItems[category]![i]['name'] != itemName) {
+                    _ownedItems[category]![i]['isApplied'] = false;
+                  }
+                }
               }
             }
           });
@@ -143,22 +162,63 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
-  void _applyItem(String category, int index) {
-    setState(() {
-      // 해당 카테고리의 모든 아이템 적용 해제
-      for (var item in _ownedItems[category]!) {
-        item['isApplied'] = false;
+  void _applyItem(String category, int index) async {
+    final item = _ownedItems[category]![index];
+    final int? newUserItemId = item['userItemId'];
+
+    // 1. 테마 적용 시 글로벌 테마 변경
+    if (category == '테마') {
+      final prefs = await SharedPreferences.getInstance();
+      if (item['name'] == '다크 모드 테마' || item['name'] == 'theme_dark') {
+        themeNotifier.value = ThemeMode.dark;
+        await prefs.setString('themeMode', 'dark');
+      } else {
+        themeNotifier.value = ThemeMode.light;
+        await prefs.setString('themeMode', 'light');
       }
-      // 선택한 아이템만 적용
+    }
+
+    // 2. 이전에 장착되어 있던 DB 아이템 찾기 (userItemId가 있는 것)
+    final currentlyApplied = _ownedItems[category]!.firstWhere(
+      (e) => e['isApplied'] == true && e['userItemId'] != null,
+      orElse: () => <String, dynamic>{},
+    );
+
+    try {
+      if (newUserItemId != null) {
+        // 새 DB 아이템 장착 (ItemService가 알아서 기존 아이템을 해제해줌)
+        await http.patch(
+          Uri.parse('${ApiConfig.baseUrl}/api/items/user-items/$newUserItemId/equip'),
+          headers: {'Authorization': 'Bearer ${widget.token}'},
+        );
+      } else if (currentlyApplied.isNotEmpty) {
+        // 기본 아이템(따뜻한 베이지)을 선택했는데, DB 아이템(다크 모드 테마)이 장착되어 있던 경우 -> 명시적으로 장착 해제
+        int oldUserItemId = currentlyApplied['userItemId'];
+        await http.patch(
+          Uri.parse('${ApiConfig.baseUrl}/api/items/user-items/$oldUserItemId/unequip'),
+          headers: {'Authorization': 'Bearer ${widget.token}'},
+        );
+      }
+    } catch (e) {
+      debugPrint('Error applying/unequipping item: $e');
+    }
+
+    setState(() {
+      // UI 상에서 카테고리 내 모든 아이템 적용 해제 후 선택한 것만 적용
+      for (var element in _ownedItems[category]!) {
+        element['isApplied'] = false;
+      }
       _ownedItems[category]![index]['isApplied'] = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${_ownedItems[category]![index]['name']}이(가) 적용되었습니다.'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${item['name']}이(가) 적용되었습니다.'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override

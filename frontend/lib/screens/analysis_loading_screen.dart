@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../config.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -34,7 +35,7 @@ class _AnalysisLoadingScreenState extends State<AnalysisLoadingScreen> with Sing
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       try {
         final response = await http.get(
-          Uri.parse('http://10.0.2.2:8080/api/journals/${widget.journalId}'),
+          Uri.parse('${ApiConfig.baseUrl}/api/journals/${widget.journalId}'),
           headers: {'Authorization': 'Bearer ${widget.token}'},
         );
 

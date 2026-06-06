@@ -1,9 +1,9 @@
-# Data Model: Leafy AI Mental Care Agent
+# Data Model: Narae AI Mental Care Agent
 
-이 문서는 Leafy 프로젝트의 데이터베이스 스키마와 엔티티 설계를 정의합니다.
+이 문서는 Narae 프로젝트의 데이터베이스 스키마와 엔티티 설계를 정의합니다.
 
 ## 1. ERD 개요
-Leafy의 데이터 모델은 사용자(User)를 중심으로 일기(Journal), 분석 결과(Emotion), 추천 활동(Recommendation), 그리고 서비스 설정(UserSettings)이 유기적으로 연결된 구조입니다.
+Narae의 데이터 모델은 사용자(User)를 중심으로 일기(Journal), 분석 결과(Emotion), 추천 활동(Recommendation), 그리고 서비스 설정(UserSettings)이 유기적으로 연결된 구조입니다.
 
 ---
 

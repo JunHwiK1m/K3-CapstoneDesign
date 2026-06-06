@@ -15,6 +15,8 @@ class PersonaStyle(str, Enum):
     BASIC = "BASIC"
     FRIENDLY = "FRIENDLY"
     STRICT = "STRICT"
+    INFORMAL = "INFORMAL"
+    FORMAL = "FORMAL"
 
 class EmotionCategory(str, Enum):
     JOY = "JOY"
@@ -32,6 +34,7 @@ class JournalAnalysisRequest(BaseSchema):
     content: str = Field(..., max_length=5000)
     voice_url: Optional[str] = None
     persona_style: PersonaStyle
+    music_style: Optional[str] = None
 
 class Recommendation(BaseSchema):
     category: ContentCategory

@@ -1,6 +1,6 @@
-# Leafy: AI Mental Care Agent 🌿
+# Narae: AI Mental Care Agent 🌿
 
-Leafy는 사용자의 일기(텍스트 및 멀티모달 데이터)를 분석하여 감정 상태를 파악하고, 그에 맞는 맞춤형 활동을 추천해주는 AI 기반 멘탈케어 에이전트 시스템입니다.
+Narae는 사용자의 일기(텍스트 및 멀티모달 데이터)를 분석하여 감정 상태를 파악하고, 그에 맞는 맞춤형 활동을 추천해주는 AI 기반 멘탈케어 에이전트 시스템입니다.
 
 ---
 
@@ -36,7 +36,7 @@ Leafy는 사용자의 일기(텍스트 및 멀티모달 데이터)를 분석하�
 
 ```env
 # Database (Dev/Prod)
-DEV_DB_URL=jdbc:postgresql://localhost:5432/leafy
+DEV_DB_URL=jdbc:postgresql://localhost:5432/narae
 DEV_DB_USERNAME=postgres
 DEV_DB_PASSWORD=your_password
 

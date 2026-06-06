@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../config.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -56,7 +57,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8080/api/journals'),
+        Uri.parse('${ApiConfig.baseUrl}/api/journals'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -71,29 +72,42 @@ class _RecordsScreenState extends State<RecordsScreen> {
               final DateTime createdAt = _parseDate(item['createdAt']);
               final DateTime normalizedDate = _normalizeDate(createdAt);
 
-              _diaries[normalizedDate] = {
-                'id': item['id'],
-                'content': item['content'] ?? '내용 없음',
-                'analysisStatus': item['analysisStatus'] ?? 'PENDING',
-                'emotion': '🌱', // 기본값
-                'score': 0, // 기본값
-                'imgUrl': item['imgUrl'], // 이미지 URL 또는 경로 추가
-              };
+              // 서버에서 최신순(내림차순)으로 오므로, 첫 번째로 만나는 데이터가 가장 최신입니다.
+              // 따라서 이미 해당 날짜의 데이터가 있다면 덮어쓰지 않고 무시합니다.
+              if (!_diaries.containsKey(normalizedDate)) {
+                _diaries[normalizedDate] = {
+                  'id': item['id'],
+                  'content': item['content'] ?? '내용 없음',
+                  'analysisStatus': item['analysisStatus'] ?? 'PENDING',
+                  'emotion': 'assets/imgs/m_normal.png', // 기본값
+                  'score': 0, // 기본값
+                  'imageUrls': item['imageUrls'] ?? [], // 전체 이미지 리스트 저장
+                };
+              }
             }
             _isLoading = false;
           });
         }
 
+        // 이미 _diaries 맵에 저장된(최신) 일기인지 확인하기 위한 Set
+        final Set<DateTime> processedDates = {};
+
         // 상세 조회를 통해 감정 데이터 덮어쓰기 (COMPLETED 상태인 경우만)
         for (var item in data) {
-          if (item['analysisStatus'] == 'COMPLETED' && item['id'] != null) {
-            final journalId = item['id'];
-            final DateTime normalizedDate = _normalizeDate(
-              _parseDate(item['createdAt']),
-            );
+          final DateTime normalizedDate = _normalizeDate(_parseDate(item['createdAt']));
+          
+          // 이미 해당 날짜의 최신 일기를 처리했다면 스킵
+          if (processedDates.contains(normalizedDate)) continue;
+          
+          // 이 일기가 해당 날짜의 최신 일기가 맞다면(즉, 맵에 저장된 id와 같다면) 처리
+          if (_diaries.containsKey(normalizedDate) && _diaries[normalizedDate]!['id'] == item['id']) {
+            processedDates.add(normalizedDate);
+            
+            if (item['analysisStatus'] == 'COMPLETED' && item['id'] != null) {
+              final journalId = item['id'];
             try {
               final detailRes = await http.get(
-                Uri.parse('http://10.0.2.2:8080/api/journals/$journalId'),
+                Uri.parse('${ApiConfig.baseUrl}/api/journals/$journalId'),
                 headers: {'Authorization': 'Bearer $token'},
               );
               if (detailRes.statusCode == 200) {
@@ -103,21 +117,21 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   final double joyScore =
                       (detailData['emotionResult']['joyScore'] ?? 0.0).toDouble();
                   int score = (joyScore * 100).toInt();
-                  String emotionEmoji = '🌱';
+                  String emotionAsset = 'assets/imgs/m_normal.png';
                   if (joyScore >= 0.7)
-                    emotionEmoji = '✨';
+                    emotionAsset = 'assets/imgs/m_happy.png';
                   else if (joyScore >= 0.4)
-                    emotionEmoji = '🌿';
+                    emotionAsset = 'assets/imgs/m_normal.png';
                   else
-                    emotionEmoji = '☁️';
+                    emotionAsset = 'assets/imgs/m_sad.png';
 
                   if (mounted) {
                     setState(() {
                       if (_diaries.containsKey(normalizedDate)) {
                         _diaries[normalizedDate]!['score'] = score;
-                        _diaries[normalizedDate]!['emotion'] = emotionEmoji;
-                        if (detailData['imgUrl'] != null && detailData['imgUrl'].toString().isNotEmpty) {
-                          _diaries[normalizedDate]!['imgUrl'] = detailData['imgUrl'];
+                        _diaries[normalizedDate]!['emotion'] = emotionAsset;
+                        if (detailData['imageUrls'] != null) {
+                          _diaries[normalizedDate]!['imageUrls'] = detailData['imageUrls'];
                         }
                       }
                     });
@@ -129,6 +143,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
             }
           }
         }
+      }
       } else {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -228,12 +243,20 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   markerBuilder: (context, day, events) {
                     final normalizedDay = _normalizeDate(day);
                     if (_diaries.containsKey(normalizedDay)) {
+                      final String emotionData = _diaries[normalizedDay]!['emotion'];
                       return Positioned(
                         bottom: 4,
-                        child: Text(
-                          _diaries[normalizedDay]!['emotion'],
-                          style: const TextStyle(fontSize: 12),
-                        ),
+                        child: emotionData.startsWith('assets/')
+                            ? Image.asset(
+                                emotionData,
+                                width: 16,
+                                height: 16,
+                                fit: BoxFit.contain,
+                              )
+                            : Text(
+                                emotionData,
+                                style: const TextStyle(fontSize: 12),
+                              ),
                       );
                     }
                     return null;
@@ -318,24 +341,6 @@ class _RecordsScreenState extends State<RecordsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 첨부 이미지가 있는 경우 렌더링
-                  if (diary['imgUrl'] != null && diary['imgUrl'].toString().isNotEmpty) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: diary['imgUrl'].toString().startsWith('http')
-                          ? Image.network(
-                              diary['imgUrl'],
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            )
-                          : Image.file(
-                              File(diary['imgUrl']),
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
                   // 일기 본문 텍스트
                   Text(
                     diary['content'],
@@ -343,6 +348,61 @@ class _RecordsScreenState extends State<RecordsScreen> {
                       context,
                     ).textTheme.bodyMedium?.copyWith(height: 1.8),
                   ),
+                  const SizedBox(height: 16),
+                  
+                  // 첨부 이미지가 있는 경우 렌더링 (텍스트 아래에 표시, 폴라로이드 디자인)
+                  if (diary['imageUrls'] != null && diary['imageUrls'].isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: List.generate((diary['imageUrls'] as List).length, (index) {
+                          final String url = diary['imageUrls'][index].toString();
+                          // 인덱스에 따라 약간씩 다른 기울기 적용 (감성 효과)
+                          final double angle = index % 3 == 0 ? -0.02 : (index % 3 == 1 ? 0.03 : -0.01);
+                          
+                          return Padding(
+                            padding: EdgeInsets.only(right: index < (diary['imageUrls'] as List).length - 1 ? 16.0 : 0),
+                            child: Center(
+                              child: Transform.rotate(
+                                angle: angle,
+                                child: Container(
+                                  padding: const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 32),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.15),
+                                        blurRadius: 10,
+                                        offset: const Offset(2, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: url.startsWith('http') || url.startsWith('/')
+                                      ? Image.network(
+                                          url.startsWith('/') 
+                                              ? '${ApiConfig.baseUrl}$url'
+                                              : url.replaceAll('localhost:8080', ApiConfig.serverIp + ':8080').replaceAll('127.0.0.1:8080', ApiConfig.serverIp + ':8080'),
+                                          width: 160,
+                                          height: 160,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.file(
+                                          File(url),
+                                          width: 160,
+                                          height: 160,
+                                          fit: BoxFit.cover,
+                                        ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ],
               ),
             ),

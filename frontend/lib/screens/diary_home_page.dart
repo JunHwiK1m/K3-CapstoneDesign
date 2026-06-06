@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'diary_write_screen.dart';
@@ -6,7 +7,7 @@ import 'store_screen.dart';
 import 'records_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
-
+import '../widgets/bouncing_mascot.dart';
 class DiaryHomePage extends StatefulWidget {
   final String? initialToken;
   const DiaryHomePage({super.key, this.initialToken});
@@ -52,7 +53,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8080/api/todos'),
+        Uri.parse('${ApiConfig.baseUrl}/api/todos'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -74,7 +75,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8080/api/todos/stats'),
+        Uri.parse('${ApiConfig.baseUrl}/api/todos/stats'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -101,7 +102,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:8080/api/todos'),
+        Uri.parse('${ApiConfig.baseUrl}/api/todos'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -129,7 +130,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
 
     try {
       final response = await http.patch(
-        Uri.parse('http://10.0.2.2:8080/api/todos/$todoId/complete'),
+        Uri.parse('${ApiConfig.baseUrl}/api/todos/$todoId/complete'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -171,7 +172,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
 
     try {
       final response = await http.delete(
-        Uri.parse('http://10.0.2.2:8080/api/todos/$todoId'),
+        Uri.parse('${ApiConfig.baseUrl}/api/todos/$todoId'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -224,23 +225,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 임시 토큰 입력 필드 (테스트용)
-            TextField(
-              controller: _tempTokenController,
-              decoration: InputDecoration(
-                hintText: '임시 토큰 입력 (입력 후 새로고침)',
-                filled: true,
-                fillColor: Colors.red.withOpacity(0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _fetchData,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
+
             // Top Section: Mascot Character Bubble
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,22 +253,8 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                     ),
                   ),
                 ),
-                // Mascot Placeholder
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.secondary.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.pets, // Mascot icon placeholder
-                    size: 40,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
+                // Mascot Image
+                const BouncingMascot(),
               ],
             ),
             const SizedBox(height: 40),
@@ -513,7 +484,20 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
           foregroundColor: Theme.of(context).colorScheme.surface,
           shape: const CircleBorder(), // make it perfectly round
           elevation: 6,
-          child: const Icon(Icons.edit, size: 36),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.edit, size: 28),
+              SizedBox(height: 2),
+              Text(
+                '일기 작성',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: BottomAppBar(
@@ -524,9 +508,10 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              IconButton(
-                icon: const Icon(Icons.person_outline, color: Colors.grey),
-                onPressed: () {
+              _buildNavItem(
+                icon: Icons.person_outline,
+                label: '프로필',
+                onTap: () {
                   Future.delayed(Duration.zero, () {
                     if (!context.mounted) return;
                     Navigator.push(
@@ -539,9 +524,10 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                   });
                 },
               ),
-              IconButton(
-                icon: const Icon(Icons.storefront_outlined, color: Colors.grey),
-                onPressed: () {
+              _buildNavItem(
+                icon: Icons.storefront_outlined,
+                label: '상점',
+                onTap: () {
                   Future.delayed(Duration.zero, () {
                     if (!context.mounted) return;
                     Navigator.push(
@@ -555,9 +541,10 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
               ),
               // 가운데 80px 크기의 FAB와 양옆 여백을 위해 넉넉히 120px 비워둠
               const SizedBox(width: 120),
-              IconButton(
-                icon: const Icon(Icons.menu_book_outlined, color: Colors.grey),
-                onPressed: () {
+              _buildNavItem(
+                icon: Icons.menu_book_outlined,
+                label: '기록',
+                onTap: () {
                   Future.delayed(Duration.zero, () {
                     if (!context.mounted) return;
                     Navigator.push(
@@ -570,9 +557,10 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                   });
                 },
               ),
-              IconButton(
-                icon: const Icon(Icons.settings_outlined, color: Colors.grey),
-                onPressed: () {
+              _buildNavItem(
+                icon: Icons.settings_outlined,
+                label: '설정',
+                onTap: () {
                   Future.delayed(Duration.zero, () {
                     if (!context.mounted) return;
                     Navigator.push(
@@ -586,6 +574,32 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({required IconData icon, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.grey),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
     );

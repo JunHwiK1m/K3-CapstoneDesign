@@ -1,6 +1,8 @@
 import 'dart:convert';
+import '../config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'diary_home_page.dart';
 
 class SetupScreen extends StatefulWidget {
@@ -11,7 +13,6 @@ class SetupScreen extends StatefulWidget {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
-  final TextEditingController _tempTokenController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
   DateTime? _selectedDate;
   TimeOfDay? _wakeUpTime;
@@ -98,7 +99,6 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   void dispose() {
-    _tempTokenController.dispose();
     _nicknameController.dispose();
     super.dispose();
   }
@@ -120,27 +120,7 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
             const SizedBox(height: 32),
 
-            // 0. 임시 토큰 입력 (테스트용)
-            Text(
-              '임시 로그인 토큰 (PC에서 복사해오세요)',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: Colors.red),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _tempTokenController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                hintText: 'eyJ... 로 시작하는 토큰을 붙여넣어주세요',
-                filled: true,
-                fillColor: Colors.red.withOpacity(0.05),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
+            // 제거됨: 임시 토큰 입력창
 
             // 1. 프로필 이미지
             Center(
@@ -545,11 +525,11 @@ class _SetupScreenState extends State<SetupScreen> {
                         });
 
                         try {
-                          // 선택된 음악 장르 문자열로 변환
-                          String selectedMusicStyles = _musicStyles.entries
+                          // 선택된 음악 장르를 리스트로 변환
+                          List<String> selectedMusicStyles = _musicStyles.entries
                               .where((e) => e.value)
                               .map((e) => e.key)
-                              .join(', ');
+                              .toList();
 
                           // 시간 포맷팅 헬퍼
                           String formatTime(TimeOfDay? time) {
@@ -563,13 +543,13 @@ class _SetupScreenState extends State<SetupScreen> {
                             return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
                           }
 
-                          // 임시 토큰 (이후 실제 인증 토큰으로 교체해야 함)
-                          final String tempToken = _tempTokenController.text
-                              .trim();
+                          final prefs = await SharedPreferences.getInstance();
+                          final String tempToken = prefs.getString('auth_token') ?? '';
+                          
                           if (tempToken.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('테스트용 임시 토큰을 위에 입력해주세요.'),
+                                content: Text('인증 정보가 없습니다. 다시 로그인해주세요.'),
                               ),
                             );
                             setState(() => _isLoading = false);
@@ -601,22 +581,27 @@ class _SetupScreenState extends State<SetupScreen> {
                               break;
                           }
 
-                          String mappedTone = 'BASIC';
+                          String mappedTone = 'FORMAL';
                           switch (_selectedTone) {
+                            case '직설적':
+                              mappedTone = 'STRICT';
+                              break;
                             case '친근한':
+                              mappedTone = 'INFORMAL';
+                              break;
                             case '공감적':
                               mappedTone = 'FRIENDLY';
                               break;
-                            case '직설적':
+                            case '정중한':
                             default:
-                              mappedTone = 'BASIC';
+                              mappedTone = 'FORMAL';
                               break;
                           }
 
                           // 1. 설정 저장 (PATCH /api/users/settings)
                           final settingsResponse = await http.patch(
                             Uri.parse(
-                              'http://10.0.2.2:8080/api/users/settings',
+                              '${ApiConfig.baseUrl}/api/users/settings',
                             ),
                             headers: headers,
                             body: jsonEncode({
@@ -625,7 +610,7 @@ class _SetupScreenState extends State<SetupScreen> {
                               "wakeUpTime": formatTime(_wakeUpTime),
                               "nickname": _nicknameController.text.trim(),
                               "personaStyle": mappedTone,
-                              "musicStyle": selectedMusicStyles,
+                              "musicStyles": selectedMusicStyles,
                               "birthDate": formatDate(_selectedDate),
                             }),
                           );
@@ -635,16 +620,19 @@ class _SetupScreenState extends State<SetupScreen> {
                             // 2. AI 분석 동의 설정 (PUT /api/users/settings/ai-analysis)
                             await http.put(
                               Uri.parse(
-                                'http://10.0.2.2:8080/api/users/settings/ai-analysis?enabled=$_agreedToAIAnalysis',
+                                '${ApiConfig.baseUrl}/api/users/settings/ai-analysis?enabled=$_agreedToAIAnalysis',
                               ),
                               headers: headers,
                             );
+
+                            // 토큰은 이미 LoginScreen에서 저장되었으므로 생략
 
                             if (context.mounted) {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => DiaryHomePage(initialToken: tempToken),
+                                  builder: (context) =>
+                                      DiaryHomePage(initialToken: tempToken),
                                 ),
                               );
                             }
