@@ -1,4 +1,4 @@
-# Research: Leafy AI Mental Care Agent
+# Research: Narae AI Mental Care Agent
 
 ## AI Server Integration (FastAPI + OpenFeign)
 - **Decision**: Use `Spring Cloud OpenFeign` with a 60s read timeout.
@@ -16,7 +16,7 @@
 
 ## Deep Link & Fallback Logic
 - **Decision**: Custom `DeepLinkBuilder` service.
-- **Rationale**: Consistent scheme generation (`leafy://...`) with URL fallbacks ensures UX consistency regardless of app installation status.
+- **Rationale**: Consistent scheme generation (`narae://...`) with URL fallbacks ensures UX consistency regardless of app installation status.
 
 ## High Risk Detection (Time-Series)
 - **Decision**: Service-layer logic querying the last 4 weeks of `EmotionResult`.

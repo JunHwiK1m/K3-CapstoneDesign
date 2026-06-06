@@ -1,8 +1,8 @@
-# AI Integration Requirements Checklist: Leafy AI Mental Care Agent
+# AI Integration Requirements Checklist: Narae AI Mental Care Agent
 
 **Purpose**: Validate the quality, clarity, and completeness of AI analysis and integration requirements.
 **Created**: 2026-05-06
-**Feature**: [specs/001-leafy-mental-care/spec.md]
+**Feature**: [specs/001-narae-mental-care/spec.md]
 
 ## Requirement Completeness
 

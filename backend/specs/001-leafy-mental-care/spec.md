@@ -1,9 +1,9 @@
-# Feature Specification: Leafy AI Mental Care Agent
+# Feature Specification: Narae AI Mental Care Agent
 
-**Feature Branch**: `001-leafy-mental-care`  
+**Feature Branch**: `001-narae-mental-care`  
 **Created**: 2026-05-06  
 **Status**: Draft  
-**Input**: AI-based mental care agent "Leafy" system overview and architecture.
+**Input**: AI-based mental care agent "Narae" system overview and architecture.
 
 ## Clarifications
 

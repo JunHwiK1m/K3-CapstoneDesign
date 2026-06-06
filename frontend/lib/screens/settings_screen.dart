@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'setup_screen.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'edit_profile_screen.dart'; 
+import 'login_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -61,13 +63,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSectionTitle('내 정보 및 AI 설정'),
           ListTile(
             leading: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.primary),
-            title: const Text('프로필 및 초기 설정 변경'),
-            subtitle: const Text('닉네임, AI 성향 등 수정'),
+            title: const Text('프로필 수정'),
+            subtitle: const Text('닉네임, AI 성향, 음악 취향 등 수정'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const SetupScreen()),
+                MaterialPageRoute(builder: (context) => const EditProfileScreen()),
               );
             },
           ),
@@ -81,7 +83,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: OutlinedButton(
-              onPressed: () {},
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('auth_token');
+                
+                if (context.mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              },
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.redAccent,
                 side: const BorderSide(color: Colors.redAccent),

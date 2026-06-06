@@ -14,7 +14,7 @@ class Orchestrator:
         self.recommendation_service = RecommendationService()
         self.client = OpenAI(api_key=ai_config.api_key)
         
-    def analyze_journal(self, journal_id: int, content: str, persona_style: str) -> dict:
+    def analyze_journal(self, journal_id: int, content: str, persona_style: str, music_style: str = None) -> dict:
         """일기 분석 파이프라인 (STT 로직 제거됨)"""
         try:
             # 1. 감정 분석
@@ -23,7 +23,10 @@ class Orchestrator:
             # 2. 추천 및 피드백 생성
             # 백엔드 연동을 위해 임시로 Todo 및 UserSettings 구성
             todo_stats = {"total": 0, "completed": 0} 
-            user_settings = {"advice_tone": persona_style}
+            user_settings = {
+                "advice_tone": persona_style,
+                "music_style": music_style
+            }
             
             recommendation_result = self.recommendation_service.get_recommendations(
                 emotion_data=emotion_result, 

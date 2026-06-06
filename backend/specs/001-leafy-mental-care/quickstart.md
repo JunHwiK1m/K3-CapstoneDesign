@@ -1,6 +1,6 @@
-# Quickstart: Leafy Development & Execution Guide
+# Quickstart: Narae Development & Execution Guide
 
-본 가이드는 Leafy AI 멘탈케어 에이전트 시스템을 로컬 및 서버 환경에서 실행하기 위한 절차를 안내합니다.
+본 가이드는 Narae AI 멘탈케어 에이전트 시스템을 로컬 및 서버 환경에서 실행하기 위한 절차를 안내합니다.
 
 ## 1. Prerequisites (사전 요구사항)
 - **Java**: JDK 21 이상
@@ -18,7 +18,7 @@
 | Variable | Description | Example (PostgreSQL 사용 시) |
 |----------|-------------|---------|
 | `SPRING_PROFILES_ACTIVE` | 실행 프로파일 | `local`, `dev`, `prod` |
-| `DATABASE_URL` | PostgreSQL 접속 주소 | `jdbc:postgresql://localhost:5432/leafy` |
+| `DATABASE_URL` | PostgreSQL 접속 주소 | `jdbc:postgresql://localhost:5432/narae` |
 | `DATABASE_USERNAME` | DB 사용자명 | `postgres` |
 | `DATABASE_PASSWORD` | DB 비밀번호 | `your_password` |
 | `AI_SERVER_URL` | AI 서버(FastAPI) 주소 | `http://localhost:8000` |
@@ -37,7 +37,7 @@ OAuth2 기능을 사용하려면 아래 설정을 `application.yml`에 추가하
 
 ### Step 1: Database Setup (PostgreSQL 사용 시에만 해당)
 ```sql
-CREATE DATABASE leafy;
+CREATE DATABASE narae;
 -- pgvector 확장이 필요한 경우 (고급 기능 사용 시)
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
@@ -62,7 +62,7 @@ cd K3-CapstoneDesign
 ## 4. API Documentation (Swagger)
 애플리케이션이 실행된 후 아래 주소에서 전체 API 명세를 확인할 수 있습니다.
 - **URL**: `http://localhost:8080/swagger-ui.html`
-- **H2 Console**: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:leafy`, ID: `sa`, PW: 없음)
+- **H2 Console**: `http://localhost:8080/h2-console` (JDBC URL: `jdbc:h2:mem:narae`, ID: `sa`, PW: 없음)
 - **인증**: 상단 `Authorize` 버튼을 클릭하고 JWT 토큰(`Bearer {token}`)을 입력하여 인증이 필요한 API를 테스트할 수 있습니다.
 
 ## 5. Testing (검증)
@@ -71,7 +71,7 @@ cd K3-CapstoneDesign
 ./gradlew test
 
 # 특정 테스트 클래스 실행 (예: 암호화 유틸리티)
-./gradlew test --tests com.leafy.util.AESUtilTest
+./gradlew test --tests com.narae.util.AESUtilTest
 ```
 
 ## 6. Key Features (주요 기능 작동 확인)

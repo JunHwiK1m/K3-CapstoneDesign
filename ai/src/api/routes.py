@@ -29,7 +29,8 @@ async def analyze_journal(request: JournalAnalysisRequest):
         result = orchestrator.analyze_journal(
             journal_id=request.journal_id,
             content=request.content,
-            persona_style=request.persona_style.value
+            persona_style=request.persona_style.value,
+            music_style=request.music_style
         )
         return JournalAnalysisResponse(**result)
     except Exception as e:

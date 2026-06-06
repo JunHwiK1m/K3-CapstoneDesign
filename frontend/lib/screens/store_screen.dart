@@ -1,6 +1,9 @@
 import 'dart:convert';
+import '../config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../main.dart';
 
 class StoreScreen extends StatefulWidget {
   final String token;
@@ -12,11 +15,19 @@ class StoreScreen extends StatefulWidget {
 
 class _StoreScreenState extends State<StoreScreen> {
   List<dynamic> _items = [];
+  List<dynamic> _myItems = [];
   Set<int> _ownedItemIds = {};
   bool _isLoading = true;
 
   String _selectedFilter = '전체';
-  final List<String> _filters = ['전체', '테마', '스티커', '배경', '폰트', '프레임', '아이콘'];
+  final List<String> _filters = ['전체', 'THEME', 'BADGE', 'PERSONA'];
+
+  // 백엔드의 영문 타입을 한글로 보여주기 위한 헬퍼 맵
+  final Map<String, String> _typeToKorean = {
+    'THEME': '테마',
+    'BADGE': '배지',
+    'PERSONA': '페르소나',
+  };
 
   @override
   void initState() {
@@ -34,7 +45,7 @@ class _StoreScreenState extends State<StoreScreen> {
     if (widget.token.isEmpty) return;
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8080/api/items'),
+        Uri.parse('${ApiConfig.baseUrl}/api/items'),
         headers: {'Authorization': 'Bearer ${widget.token}'},
       );
       if (response.statusCode == 200) {
@@ -50,7 +61,7 @@ class _StoreScreenState extends State<StoreScreen> {
     if (widget.token.isEmpty) return;
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8080/api/items/my'),
+        Uri.parse('${ApiConfig.baseUrl}/api/items/my'),
         headers: {'Authorization': 'Bearer ${widget.token}'},
       );
       if (response.statusCode == 200) {
@@ -58,7 +69,8 @@ class _StoreScreenState extends State<StoreScreen> {
         final data = body['data'] as List<dynamic>? ?? [];
         if (mounted) {
           setState(() {
-            _ownedItemIds = data.map<int>((e) => e['item']['id'] as int).toSet();
+            _myItems = data;
+            _ownedItemIds = data.map<int>((e) => e['itemId'] as int).toSet();
           });
         }
       }
@@ -71,7 +83,7 @@ class _StoreScreenState extends State<StoreScreen> {
     if (widget.token.isEmpty) return;
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:8080/api/items/$itemId/purchase'),
+        Uri.parse('${ApiConfig.baseUrl}/api/items/$itemId/purchase'),
         headers: {'Authorization': 'Bearer ${widget.token}'},
       );
       if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -96,23 +108,56 @@ class _StoreScreenState extends State<StoreScreen> {
     }
   }
 
+  Future<void> _equipItem(int userItemId, String resourceUrl, String name) async {
+    if (widget.token.isEmpty) return;
+    try {
+      final response = await http.patch(
+        Uri.parse('${ApiConfig.baseUrl}/api/items/user-items/$userItemId/equip'),
+        headers: {'Authorization': 'Bearer ${widget.token}'},
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        // Change Theme globally
+        final prefs = await SharedPreferences.getInstance();
+        if (resourceUrl == 'theme_dark' || name == '다크 모드 테마') {
+          themeNotifier.value = ThemeMode.dark;
+          await prefs.setString('themeMode', 'dark');
+        } else {
+          themeNotifier.value = ThemeMode.light;
+          await prefs.setString('themeMode', 'light');
+        }
+        _fetchMyItems();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$name 장착 완료! ✨')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('장착 실패: ${response.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error equipping: $e");
+    }
+  }
+
   IconData _getIconForCategory(String? category) {
     switch (category) {
-      case '테마': return Icons.local_florist;
-      case '스티커': return Icons.style;
-      case '배경': return Icons.nightlight_round;
-      case '폰트': return Icons.font_download;
-      case '프레임': return Icons.crop_original;
-      case '아이콘': return Icons.coffee;
+      case 'THEME': return Icons.nightlight_round;
+      case 'BADGE': return Icons.stars;
+      case 'PERSONA': return Icons.person;
       default: return Icons.card_giftcard;
     }
   }
 
-  void _showPurchaseDialog(dynamic item) {
-    final name = item['name'] ?? '알 수 없음';
+  void _showItemDialog(dynamic item, bool isOwned, int? userItemId) {
+    final name = item['itemName'] ?? '알 수 없음';
     final price = item['price']?.toString() ?? '0';
-    final icon = _getIconForCategory(item['category']);
+    final icon = _getIconForCategory(item['itemType']);
     final int itemId = item['id'];
+    final String resourceUrl = item['resourceUrl'] ?? '';
 
     showDialog(
       context: context,
@@ -121,7 +166,7 @@ class _StoreScreenState extends State<StoreScreen> {
           backgroundColor: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
-            '$name 구매',
+            isOwned ? '$name 장착' : '$name 구매',
             style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
           ),
           content: Column(
@@ -130,7 +175,7 @@ class _StoreScreenState extends State<StoreScreen> {
               Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.8)),
               const SizedBox(height: 16),
               Text(
-                '이 아이템을 $price 코인에 구매하시겠습니까?',
+                isOwned ? '이 테마를 지금 장착하시겠습니까?' : '이 아이템을 $price 포인트에 구매하시겠습니까?',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
@@ -144,14 +189,18 @@ class _StoreScreenState extends State<StoreScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                _purchaseItem(itemId, name);
+                if (isOwned && userItemId != null) {
+                  _equipItem(userItemId, resourceUrl, name);
+                } else {
+                  _purchaseItem(itemId, name);
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Theme.of(context).colorScheme.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('구매하기'),
+              child: Text(isOwned ? '장착하기' : '구매하기'),
             ),
           ],
         );
@@ -163,7 +212,7 @@ class _StoreScreenState extends State<StoreScreen> {
   Widget build(BuildContext context) {
     List<dynamic> filteredItems = _selectedFilter == '전체'
         ? _items
-        : _items.where((item) => item['category'] == _selectedFilter).toList();
+        : _items.where((item) => item['itemType'] == _selectedFilter).toList();
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -205,8 +254,9 @@ class _StoreScreenState extends State<StoreScreen> {
                   itemCount: _filters.length,
                   itemBuilder: (context, index) {
                     final filter = _filters[index];
+                    final displayTitle = filter == '전체' ? '전체' : _typeToKorean[filter] ?? filter;
                     return ListTile(
-                      title: Text(filter, style: Theme.of(context).textTheme.bodyMedium),
+                      title: Text(displayTitle, style: Theme.of(context).textTheme.bodyMedium),
                       trailing: _selectedFilter == filter
                           ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                           : null,
@@ -238,16 +288,37 @@ class _StoreScreenState extends State<StoreScreen> {
               itemBuilder: (context, index) {
                 final item = filteredItems[index];
                 final bool isOwned = _ownedItemIds.contains(item['id']);
-                final icon = _getIconForCategory(item['category']);
+                bool isEquipped = false;
+                int? userItemId;
+                if (isOwned) {
+                  final ownedItemInfo = _myItems.firstWhere((e) => e['itemId'] == item['id'], orElse: () => null);
+                  if (ownedItemInfo != null) {
+                    userItemId = ownedItemInfo['userItemId'];
+                    isEquipped = ownedItemInfo['isEquipped'] ?? false;
+                  }
+                }
+                final icon = _getIconForCategory(item['itemType']);
                 final price = item['price']?.toString() ?? '0';
 
                 return GestureDetector(
-                  onTap: isOwned ? null : () => _showPurchaseDialog(item),
+                  onTap: () {
+                    if (!isOwned) {
+                      _showItemDialog(item, false, null);
+                    } else if (item['itemType'] == 'THEME' && userItemId != null) {
+                      // 테마는 보유 시 장착 가능
+                      _showItemDialog(item, true, userItemId);
+                    }
+                  },
                   child: Container(
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surfaceContainer,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.3)),
+                      border: Border.all(
+                        color: isEquipped 
+                            ? Theme.of(context).colorScheme.primary 
+                            : Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                        width: isEquipped ? 2.0 : 1.0,
+                      ),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -256,29 +327,31 @@ class _StoreScreenState extends State<StoreScreen> {
                           icon,
                           size: 48,
                           color: isOwned 
-                              ? Colors.grey 
+                              ? (isEquipped ? Theme.of(context).colorScheme.primary : Colors.grey)
                               : Theme.of(context).colorScheme.primary.withOpacity(0.8),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          item['name'] ?? '알 수 없음',
+                          item['itemName'] ?? '알 수 없음',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isOwned 
-                                ? Colors.grey.withOpacity(0.2) 
-                                : Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                            color: isEquipped 
+                                ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                                : (isOwned ? Colors.grey.withOpacity(0.2) : Theme.of(context).colorScheme.secondary.withOpacity(0.2)),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            isOwned ? '보유중' : '$price 코인',
+                            isEquipped ? '장착중' : (isOwned ? '보유중' : '$price 포인트'),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isOwned ? Colors.grey : Theme.of(context).colorScheme.primary,
+                              color: isEquipped 
+                                  ? Theme.of(context).colorScheme.primary
+                                  : (isOwned ? Colors.grey : Theme.of(context).colorScheme.primary),
                             ),
                           ),
                         ),

@@ -54,6 +54,8 @@ Thumbs.db
 *.p12
 *.key
 *.pem
+narae-firebase-adminsdk.json
+src/main/resources/firebase/
 
 # --- QueryDSL Generated ---
 /src/main/generated/

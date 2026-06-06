@@ -61,7 +61,34 @@ class RecommendationService:
         todo_rate = (completed_todos / total_todos) if total_todos > 0 else 0.0
         
         dominant_emotion = self._determine_dominant_emotion(emotion_data)
-        playlist_entry = random.choice(self.playlists.get(dominant_emotion, [{"id": "37i9dQZF1DXcBWIGoYBM3M", "title": "Today's Top Hits"}]))
+        
+        user_music_style = user_settings.get("music_style", "")
+        preferred_styles = [s.strip().lower() for s in user_music_style.split(",")] if user_music_style else []
+        
+        tier1 = [] # 1순위: 취향 일치 + 감정 일치
+        tier2 = [] # 2순위: 취향 일치 (감정 무관)
+        tier3 = self.playlists.get(dominant_emotion, [{"id": "37i9dQZF1DXcBWIGoYBM3M", "title": "Today's Top Hits"}]) # 3순위: 감정 일치
+        
+        for emotion, p_list in self.playlists.items():
+            for p in p_list:
+                genre = p["title"].split(":")[0].strip().lower() if ":" in p["title"] else p["title"].strip().lower()
+                if any(pref in genre for pref in preferred_styles):
+                    tier2.append(p)
+                    if emotion == dominant_emotion:
+                        tier1.append(p)
+                        
+        print(f"[DEBUG] User Music Style: '{user_music_style}' -> Parsed: {preferred_styles}")
+        print(f"[DEBUG] Tier1 matches: {len(tier1)}, Tier2 matches: {len(tier2)}")
+        
+        if tier1:
+            filtered_playlists = tier1
+        elif tier2:
+            filtered_playlists = tier2
+        else:
+            filtered_playlists = tier3
+            
+        playlist_entry = random.choice(filtered_playlists)
+        
         spotify_id = playlist_entry["id"]
         spotify_title = playlist_entry["title"]
         

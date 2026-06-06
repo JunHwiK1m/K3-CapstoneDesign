@@ -1,9 +1,10 @@
 import 'dart:convert';
+import '../config.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:spotify_sdk/spotify_sdk.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import '../widgets/bouncing_mascot.dart';
 class AnalysisResultScreen extends StatefulWidget {
   final String token;
   final int journalId;
@@ -38,12 +39,12 @@ class _AnalysisResultScreenState extends State<AnalysisResultScreen> {
 
       final futures = await Future.wait([
         http.get(
-          Uri.parse('http://10.0.2.2:8080/api/journals/$journalId'),
+          Uri.parse('${ApiConfig.baseUrl}/api/journals/$journalId'),
           headers: {'Authorization': 'Bearer $token'},
         ),
         http.get(
           Uri.parse(
-            'http://10.0.2.2:8080/api/recommendations?journalId=$journalId',
+            '${ApiConfig.baseUrl}/api/recommendations?journalId=$journalId',
           ),
           headers: {'Authorization': 'Bearer $token'},
         ),
@@ -89,7 +90,7 @@ class _AnalysisResultScreenState extends State<AnalysisResultScreen> {
       // 1. Send click status to backend
       if (recId > 0) {
         await http.patch(
-          Uri.parse('http://10.0.2.2:8080/api/recommendations/$recId/click'),
+          Uri.parse('${ApiConfig.baseUrl}/api/recommendations/$recId/click'),
           headers: {'Authorization': 'Bearer ${widget.token}'},
         );
       }
@@ -102,26 +103,36 @@ class _AnalysisResultScreenState extends State<AnalysisResultScreen> {
     // 2. Open link based on category
     if (category == 'MUSIC' && externalLink.startsWith('spotify:')) {
       try {
-        // 스포티파이 SDK를 통해 앱을 열지 않고 백그라운드 재생 시도
-        // TODO: 사용자가 대시보드에서 발급받은 Client ID로 변경해야 합니다.
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('스포티파이에 연결 중입니다... (최초 1회 인증 필요)')),
+          );
+        }
+
+        // 스포티파이 SDK를 통해 앱을 열지 않고 백그라운드 재생 시도 (타임아웃 15초로 늘림)
         bool result = await SpotifySdk.connectToSpotifyRemote(
           clientId: 'b2a2b0e246b2460b83f8673cbc2e40d9',
           redirectUrl: 'narae://spotify-callback',
-        );
+        ).timeout(const Duration(seconds: 15));
 
         if (result) {
           await SpotifySdk.play(spotifyUri: externalLink);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('스포티파이 백그라운드 재생을 시작합니다.')),
+              const SnackBar(content: Text('스포티파이 백그라운드 재생을 시작합니다 🎵')),
             );
           }
         } else {
-          throw Exception('Spotify remote connection failed');
+          throw Exception('Spotify remote connection failed (Result is false)');
         }
       } catch (e) {
-        debugPrint('Spotify SDK Error: $e');
-        // 실패 시 (앱 미설치 등) 일반 딥링크로 Fallback 시도
+        debugPrint('Spotify SDK Error or Timeout: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('스포티파이 연결 에러: $e\n(앱이 열리며 재생됩니다)')),
+          );
+        }
+        // 연결 지연(무한 대기) 또는 에러 발생 시 앱을 직접 여는 방식으로 Fallback
         if (await canLaunchUrl(Uri.parse(externalLink))) {
           await launchUrl(
             Uri.parse(externalLink),
@@ -132,10 +143,6 @@ class _AnalysisResultScreenState extends State<AnalysisResultScreen> {
           await launchUrl(
             Uri.parse(fallbackUrl),
             mode: LaunchMode.externalApplication,
-          );
-        } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('스포티파이 앱을 찾을 수 없거나 재생할 수 없습니다.')),
           );
         }
       }
@@ -215,22 +222,8 @@ class _AnalysisResultScreenState extends State<AnalysisResultScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Mascot Placeholder
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.secondary.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.pets, // Mascot icon placeholder
-                    size: 40,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
+                // Mascot Image
+                const BouncingMascot(),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Container(

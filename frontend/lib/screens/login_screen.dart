@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../config.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/fcm_service.dart';
 import 'setup_screen.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -18,14 +21,18 @@ class LoginScreen extends StatelessWidget {
               // App Logo
               Column(
                 children: [
-                  Icon(
-                    Icons.auto_stories_rounded,
-                    size: 100,
-                    color: Theme.of(context).colorScheme.primary,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.asset(
+                      'assets/imgs/app_logo_nb.png',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   Text(
-                    'AI Diary',
+                    '나래',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
@@ -52,31 +59,37 @@ class LoginScreen extends StatelessWidget {
                 height: 56,
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    // 백엔드 OAuth2 리다이렉트 URL (에뮬레이터용 10.0.2.2, 실제 기기/웹의 경우 서버 주소로 변경 필요)
-                    final Uri url = Uri.parse(
-                      'http://10.0.2.2:8080/oauth2/authorization/google',
-                    );
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(
-                        url,
-                        mode: LaunchMode.externalApplication,
+                    final String url =
+                        '${ApiConfig.baseUrl}/oauth2/authorization/google';
+                    try {
+                      final result = await FlutterWebAuth2.authenticate(
+                        url: url,
+                        callbackUrlScheme: 'narae',
                       );
 
-                      // 성공적으로 URL을 띄운 후 다음 화면(초기 설정 화면)으로 넘어갑니다.
-                      // (실제 프로덕션에서는 딥링크나 flutter_web_auth 패키지 등을 통해 토큰을 받아온 뒤 넘어가야 합니다.)
-                      if (context.mounted) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SetupScreen(),
-                          ),
-                        );
+                      final token = Uri.parse(result).queryParameters['token'];
+
+                      if (token != null && token.isNotEmpty) {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('auth_token', token);
+
+                        // FCM 토큰 백엔드에 등록 (비동기, 성공여부 상관없이 다음 화면으로)
+                        FcmService().uploadFcmToken();
+
+                        if (context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SetupScreen(),
+                            ),
+                          );
+                        }
                       }
-                    } else {
+                    } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('구글 로그인 창을 열 수 없습니다.')),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('로그인 실패: $e')));
                       }
                     }
                   },

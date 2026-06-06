@@ -2,7 +2,7 @@ spring:
   profiles:
     active: local
   application:
-    name: leafy
+    name: narae
   jpa:
     open-in-view: false
     hibernate:
@@ -21,6 +21,11 @@ spring:
       shutdown:
         await-termination: true
         await-termination-period: 10s
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
 
   security:
     oauth2:
@@ -80,6 +85,6 @@ app:
 # Logging
 logging:
   level:
-    com.leafy: debug
+    com.narae: debug
     org.hibernate.SQL: debug
     org.hibernate.type.descriptor.sql.BasicBinder: trace
