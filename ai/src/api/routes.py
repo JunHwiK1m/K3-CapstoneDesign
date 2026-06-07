@@ -30,7 +30,8 @@ async def analyze_journal(request: JournalAnalysisRequest):
             journal_id=request.journal_id,
             content=request.content,
             persona_style=request.persona_style.value,
-            music_style=request.music_style
+            music_style=request.music_style,
+            image_urls=request.image_urls
         )
         return JournalAnalysisResponse(**result)
     except Exception as e:
