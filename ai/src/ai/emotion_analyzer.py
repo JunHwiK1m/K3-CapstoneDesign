@@ -11,18 +11,31 @@ class EmotionAnalyzer:
         self.client = OpenAI(api_key=ai_config.api_key)
         
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def _call_openai(self, system_prompt: str, text: str) -> str:
+    def _call_openai(self, system_prompt: str, text: str, image_urls: list = None) -> str:
+        messages = [
+            {"role": "system", "content": system_prompt}
+        ]
+        
+        if image_urls and len(image_urls) > 0:
+            content = [{"type": "text", "text": text}]
+            for url in image_urls:
+                if url:
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {"url": url}
+                    })
+            messages.append({"role": "user", "content": content})
+        else:
+            messages.append({"role": "user", "content": text})
+            
         response = self.client.chat.completions.create(
             model=ai_config.llm_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
-            ],
+            messages=messages,
             response_format={"type": "json_object"}
         )
         return response.choices[0].message.content
 
-    def analyze(self, text: str, persona_style: str = "FRIENDLY") -> dict:
+    def analyze(self, text: str, persona_style: str = "FRIENDLY", image_urls: list = None) -> dict:
         """OpenAI 모델을 호출하여 감정을 분석한다."""
         prompt_guide = ai_config.get_prompt_guide()
         tone_guide = PromptFactory.get_tone_guide(persona_style)
@@ -30,12 +43,13 @@ class EmotionAnalyzer:
         system_prompt = (
             f"당신은 유능한 감정 분석 에이전트입니다. 다음 지침에 따라 JSON 형식으로만 응답하십시오.\n"
             f"지침: {prompt_guide}\n"
+            f"멀티모달 지침: 첨부된 이미지가 있다면 이는 사용자의 주변 환경(Context)을 파악하는 용도로 20%의 가중치로만 참고하고, 핵심 감정은 무조건 일기 '텍스트'에서 80% 이상의 비중으로 도출하여 이미지가 텍스트의 감정(기쁨/슬픔 등)을 왜곡하거나 뒤집지 않도록 주의하라.\n"
             f"말투 지침: emotion_summary 작성 시 다음을 따르세요: {tone_guide}\n"
             "응답 예시: {\"joy_score\": 0.5, \"sadness_score\": 0.2, \"stress_level\": 0.3, \"emotion_summary\": \"사용자의 상황을 2줄 이내로 요약한 문장\"}"
         )
         
         try:
-            content = self._call_openai(system_prompt, text)
+            content = self._call_openai(system_prompt, text, image_urls)
             result = json.loads(content)
             
             # 오타 대응 (emtion_summary로 올 경우 교정)

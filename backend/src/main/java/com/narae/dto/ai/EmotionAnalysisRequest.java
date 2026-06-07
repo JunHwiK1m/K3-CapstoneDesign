@@ -21,4 +21,6 @@ public class EmotionAnalysisRequest {
     private String personaStyle;
 
     private String musicStyle;
+
+    private java.util.List<String> imageUrls;
 }

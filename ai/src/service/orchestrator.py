@@ -14,11 +14,11 @@ class Orchestrator:
         self.recommendation_service = RecommendationService()
         self.client = OpenAI(api_key=ai_config.api_key)
         
-    def analyze_journal(self, journal_id: int, content: str, persona_style: str, music_style: str = None) -> dict:
-        """일기 분석 파이프라인 (STT 로직 제거됨)"""
+    def analyze_journal(self, journal_id: int, content: str, persona_style: str, music_style: str = None, image_urls: list = None) -> dict:
+        """일기 분석 파이프라인 (STT 로직 제거됨, 멀티모달 이미지 분석 추가됨)"""
         try:
             # 1. 감정 분석
-            emotion_result = self.emotion_analyzer.analyze(content, persona_style)
+            emotion_result = self.emotion_analyzer.analyze(content, persona_style, image_urls)
             
             # 2. 추천 및 피드백 생성
             # 백엔드 연동을 위해 임시로 Todo 및 UserSettings 구성

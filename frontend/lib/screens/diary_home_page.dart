@@ -139,7 +139,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
         // Revert optimistic update on failure
         if (mounted) {
           setState(() {
-            _todos[index]['isCompleted'] = false;
+            _todos[index]['completed'] = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('할 일 완료 처리 실패: ${response.statusCode}')),
@@ -151,7 +151,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
       // Revert optimistic update on failure
       if (mounted) {
         setState(() {
-          _todos[index]['isCompleted'] = false;
+          _todos[index]['completed'] = false;
         });
       }
     }
@@ -324,7 +324,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                       itemCount: _todos.length,
                       itemBuilder: (context, index) {
                         final todo = _todos[index];
-                        final bool isDone = todo['isCompleted'] ?? false;
+                        final bool isDone = todo['completed'] ?? false;
                         final String title = todo['taskName'] ?? '';
                         final int id = todo['id'];
 
@@ -367,7 +367,7 @@ class _DiaryHomePageState extends State<DiaryHomePage> {
                               if (value == true && !isDone) {
                                 // Optimistic UI update
                                 setState(() {
-                                  _todos[index]['isCompleted'] = true;
+                                  _todos[index]['completed'] = true;
                                 });
                                 _completeTodo(id, index);
                               } else if (value == false && isDone) {
