@@ -54,13 +54,15 @@ public class TodoService {
     }
 
     public List<TodoResponse> getMyTodos(Long userId) {
-        return todoRepository.findAllByUserIdOrderByDueDateAsc(userId).stream()
+        java.time.LocalDateTime startOfDay = java.time.LocalDate.now().atStartOfDay();
+        return todoRepository.findAllByUserIdAndCreatedAtAfterOrderByCreatedAtAsc(userId, startOfDay).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
     public TodoStatsResponse getTodoStats(Long userId) {
-        List<Todo> todos = todoRepository.findAllByUserIdOrderByDueDateAsc(userId);
+        java.time.LocalDateTime startOfDay = java.time.LocalDate.now().atStartOfDay();
+        List<Todo> todos = todoRepository.findAllByUserIdAndCreatedAtAfterOrderByCreatedAtAsc(userId, startOfDay);
         long totalCount = todos.size();
         long completedCount = todos.stream().filter(Todo::isCompleted).count();
         

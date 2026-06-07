@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../config.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/fcm_service.dart';
 import 'setup_screen.dart';
+import 'diary_home_page.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -76,13 +79,43 @@ class LoginScreen extends StatelessWidget {
                         // FCM 토큰 백엔드에 등록 (비동기, 성공여부 상관없이 다음 화면으로)
                         FcmService().uploadFcmToken();
 
-                        if (context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SetupScreen(),
-                            ),
+                        // 닉네임 설정 여부 확인하여 화면 분기
+                        bool isSetupComplete = false;
+                        try {
+                          final response = await http.get(
+                            Uri.parse('${ApiConfig.baseUrl}/api/users/settings'),
+                            headers: {
+                              'Authorization': 'Bearer $token',
+                              'Content-Type': 'application/json',
+                            },
                           );
+                          if (response.statusCode == 200) {
+                            final data = jsonDecode(utf8.decode(response.bodyBytes));
+                            final nickname = data['data']?['nickname'];
+                            if (nickname != null && nickname.toString().trim().isNotEmpty) {
+                              isSetupComplete = true;
+                            }
+                          }
+                        } catch (e) {
+                          debugPrint("설정 조회 실패: $e");
+                        }
+
+                        if (context.mounted) {
+                          if (isSetupComplete) {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DiaryHomePage(initialToken: token),
+                              ),
+                            );
+                          } else {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SetupScreen(),
+                              ),
+                            );
+                          }
                         }
                       }
                     } catch (e) {
