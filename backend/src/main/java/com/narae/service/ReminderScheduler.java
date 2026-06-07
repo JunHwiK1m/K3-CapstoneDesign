@@ -1,0 +1,98 @@
+package com.narae.service;
+
+import com.narae.entity.User;
+import com.narae.entity.UserSettings;
+import com.narae.repository.JournalRepository;
+import com.narae.repository.TodoRepository;
+import com.narae.repository.UserSettingsRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ReminderScheduler {
+
+    private final UserSettingsRepository userSettingsRepository;
+    private final JournalRepository journalRepository;
+    private final TodoRepository todoRepository;
+    private final FcmService fcmService;
+
+    /**
+     * 사용자가 설정한 리마인더 시간에 맞춰 알림을 발송합니다.
+     * 매 분 정각에 실행되며, 현재 시간(시:분)과 일치하는 설정값을 가진 사용자 중
+     * 오늘 아직 일기를 작성하지 않은 사용자에게 알림을 보냅니다.
+     */
+    @Scheduled(cron = "0 * * * * *")
+    @Transactional(readOnly = true)
+    public void sendPersonalizedReminders() {
+        // 초를 제외한 현재 시간 (시:분)
+        LocalTime now = LocalTime.now().withSecond(0).withNano(0);
+        log.debug("Checking for reminders at {}", now);
+
+        // 1. 현재 시간이 리마인더 시간인 모든 설정 조회
+        List<UserSettings> targetSettings = userSettingsRepository.findAllByDiaryTime(now);
+
+        if (!targetSettings.isEmpty()) {
+            log.info("Found {} users with reminder time {}", targetSettings.size(), now);
+
+        for (UserSettings settings : targetSettings) {
+            User user = settings.getUser();
+            String displayName = (settings.getNickname() != null && !settings.getNickname().trim().isEmpty()) 
+                    ? settings.getNickname() : user.getName();
+            
+            // 2. 오늘(00:00:00 이후) 일기를 이미 작성했는지 확인
+            boolean alreadyWritten = journalRepository.existsByUserIdAndCreatedAtAfter(
+                    user.getId(), 
+                    LocalDate.now().atStartOfDay()
+            );
+
+            if (!alreadyWritten) {
+                sendFcmNotification(user, "오늘의 마음을 기록할 시간이에요! 🌿", displayName + "님, 설정하신 시간이 되었습니다. 오늘 하루는 어떠셨나요? Narae에 기록해보세요.");
+            } else {
+                log.debug("User {} already wrote a journal today. Skipping diary reminder.", user.getEmail());
+            }
+            }
+        }
+        
+        // 3. 기상 시간(wakeUpTime) 확인 및 투두 리스트 알림 전송
+        List<UserSettings> wakeUpSettings = userSettingsRepository.findAllByWakeUpTime(now);
+        if (!wakeUpSettings.isEmpty()) {
+            log.info("Found {} users with wake-up time {}", wakeUpSettings.size(), now);
+            for (UserSettings settings : wakeUpSettings) {
+                User user = settings.getUser();
+                String displayName = (settings.getNickname() != null && !settings.getNickname().trim().isEmpty()) 
+                        ? settings.getNickname() : user.getName();
+                
+                // 오늘 투두 리스트를 이미 작성했는지 확인
+                boolean alreadyPlanned = todoRepository.existsByUserIdAndCreatedAtAfter(
+                        user.getId(),
+                        LocalDate.now().atStartOfDay()
+                );
+                
+                if (!alreadyPlanned) {
+                    sendFcmNotification(user, "오늘의 할 일을 계획해 볼까요? ☀️", displayName + "님, 상쾌한 아침입니다! 오늘 하루의 목표를 세워보세요.");
+                } else {
+                    log.debug("User {} already created a todo today. Skipping wake-up reminder.", user.getEmail());
+                }
+            }
+        }
+    }
+
+    private void sendFcmNotification(User user, String title, String body) {
+        if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
+            log.warn("Cannot send FCM reminder to user {}: No FCM token registered.", user.getEmail());
+            return;
+        }
+
+        fcmService.sendMessage(user.getFcmToken(), title, body);
+        log.info("FCM Reminder request sent for user {}", user.getEmail());
+    }
+}

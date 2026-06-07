@@ -1,0 +1,138 @@
+{
+  "JOY": [
+    {
+      "id": "37i9dQZF1DX2ohL85TE8TI",
+      "title": "발라드: 기쁨을 노래하는 어쿠스틱 발라드"
+    },
+    {
+      "id": "37i9dQZF1DWT9uTRZAYj0c",
+      "title": "팝: 트렌디하고 밝은 팝 힛츠"
+    },
+    {
+      "id": "37i9dQZF1DX0XUsuxWHRQd",
+      "title": "힙합: 신나는 그루브 힙합"
+    },
+    {
+      "id": "37i9dQZF1DWYBO1MoTDhZI",
+      "title": "R&B: 리드미컬하고 밝은 R&B"
+    },
+    {
+      "id": "37i9dQZF1DX4sWSpwq3LiO",
+      "title": "클래식: 경쾌하고 우아한 클래식 피아노"
+    },
+    {
+      "id": "37i9dQZF1DX8Uebhn9wzrS",
+      "title": "재즈: 기분 좋은 라운지 재즈"
+    },
+    {
+      "id": "37i9dQZF1DX2ohL85TE8TI",
+      "title": "인디: 달달하고 청량한 인디 어쿠스틱"
+    },
+    {
+      "id": "37i9dQZF1DX9tPFwDMOaN1",
+      "title": "K-Pop: 기분 좋은 댄스 K-Pop"
+    }
+  ],
+  "SADNESS": [
+    {
+      "id": "37i9dQZF1DX5LEXW9eXA0n",
+      "title": "발라드: 눈물짓게 하는 감성 발라드"
+    },
+    {
+      "id": "37i9dQZF1DX4WYpdgoIcn6",
+      "title": "팝: 위로가 필요한 날 듣는 팝"
+    },
+    {
+      "id": "37i9dQZF1DWWQRwui0ExPn",
+      "title": "힙합: 쓸쓸한 밤 로파이 힙합 비트"
+    },
+    {
+      "id": "37i9dQZF1DX3Ogo9pFvBkY",
+      "title": "R&B: 우울한 마음을 적시는 R&B"
+    },
+    {
+      "id": "37i9dQZF1DX4sWSpwq3LiO",
+      "title": "클래식: 마음을 차분히 가라앉히는 클래식 피아노"
+    },
+    {
+      "id": "37i9dQZF1DX8Uebhn9wzrS",
+      "title": "재즈: 깊어가는 밤 차분한 재즈"
+    },
+    {
+      "id": "37i9dQZF1DX5LEXW9eXA0n",
+      "title": "인디: 위로와 공감의 감성 인디"
+    },
+    {
+      "id": "37i9dQZF1DX9tPFwDMOaN1",
+      "title": "K-Pop: 슬픈 감성을 자극하는 K-Pop"
+    }
+  ],
+  "STRESS": [
+    {
+      "id": "37i9dQZF1DX2ohL85TE8TI",
+      "title": "발라드: 마음을 풀어주는 힐링 발라드"
+    },
+    {
+      "id": "37i9dQZF1DX4WYpdgoIcn6",
+      "title": "팝: 스트레스를 날리는 이지리스닝 팝"
+    },
+    {
+      "id": "37i9dQZF1DWWQRwui0ExPn",
+      "title": "힙합: 릴렉싱 로파이 힙합 비트"
+    },
+    {
+      "id": "37i9dQZF1DX8Uebhn9wzrS",
+      "title": "R&B: 마음을 이완시키는 칠 R&B"
+    },
+    {
+      "id": "37i9dQZF1DX4sWSpwq3LiO",
+      "title": "클래식: 마음을 진정시키는 평온한 클래식 피아노"
+    },
+    {
+      "id": "37i9dQZF1DWZeKCadgRdKQ",
+      "title": "재즈: 편안한 카페 재즈 브금"
+    },
+    {
+      "id": "37i9dQZF1DWWQRwui0ExPn",
+      "title": "인디: 나른한 오후의 드림팝 인디"
+    },
+    {
+      "id": "37i9dQZF1DX9tPFwDMOaN1",
+      "title": "K-Pop: 스트레스 완화 잔잔한 K-Pop"
+    }
+  ],
+  "NEUTRAL": [
+    {
+      "id": "37i9dQZF1DX2ohL85TE8TI",
+      "title": "발라드: 차분한 일상 속 어쿠스틱 발라드"
+    },
+    {
+      "id": "37i9dQZF1DX4WYpdgoIcn6",
+      "title": "팝: 듣기 편한 이지 팝"
+    },
+    {
+      "id": "37i9dQZF1DWWQRwui0ExPn",
+      "title": "힙합: 일상에 녹아드는 로파이 힙합"
+    },
+    {
+      "id": "37i9dQZF1DX8Uebhn9wzrS",
+      "title": "R&B: 기분 좋은 배경음악 R&B"
+    },
+    {
+      "id": "37i9dQZF1DX4sWSpwq3LiO",
+      "title": "클래식: 집중력을 돕는 차분한 클래식"
+    },
+    {
+      "id": "37i9dQZF1DWZeKCadgRdKQ",
+      "title": "재즈: 나른한 일상의 라운지 재즈"
+    },
+    {
+      "id": "37i9dQZF1DX2ohL85TE8TI",
+      "title": "인디: 소소한 하루를 빛내는 인디 음악"
+    },
+    {
+      "id": "37i9dQZF1DX9tPFwDMOaN1",
+      "title": "K-Pop: 가볍게 듣는 미디엄 템포 K-Pop"
+    }
+  ]
+}
