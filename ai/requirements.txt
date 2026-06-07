@@ -4,3 +4,9 @@ librosa
 pytest
 pytest-asyncio
 python-dotenv
+fastapi
+uvicorn
+slowapi
+pydantic
+tenacity
+python-json-logger
