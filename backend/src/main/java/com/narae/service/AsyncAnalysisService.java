@@ -58,6 +58,7 @@ public class AsyncAnalysisService {
                     .voiceUrl(journal.getVoiceUrl())
                     .personaStyle(personaStyle)
                     .musicStyle(musicStyle)
+                    .imageUrls(journal.getImageUrls())
                     .build();
 
             // 통합 엔드포인트 호출 (분석 + 추천)

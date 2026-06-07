@@ -35,6 +35,7 @@ class JournalAnalysisRequest(BaseSchema):
     voice_url: Optional[str] = None
     persona_style: PersonaStyle
     music_style: Optional[str] = None
+    image_urls: Optional[List[str]] = None
 
 class Recommendation(BaseSchema):
     category: ContentCategory
