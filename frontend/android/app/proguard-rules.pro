@@ -1,0 +1,4 @@
+-dontwarn com.fasterxml.jackson.**
+-dontwarn com.spotify.**
+-keep class com.spotify.** { *; }
+-keep class com.fasterxml.jackson.** { *; }
