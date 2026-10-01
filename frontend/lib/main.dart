@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -11,6 +12,14 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 환경 변수(.env) 로드 (스포티파이 SDK 키 등)
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint('.env 파일을 로드하는 중 오류 발생: $e');
+  }
+
   await Firebase.initializeApp();
   await FcmService().init();
   FcmService().uploadFcmToken();
