@@ -109,10 +109,10 @@ class _AnalysisResultScreenState extends State<AnalysisResultScreen> {
           );
         }
 
-        // 스포티파이 SDK를 통해 앱을 열지 않고 백그라운드 재생 시도 (타임아웃 15초로 늘림)
+        // 스포티파이 SDK를 통해 앱을 열지 않고 백그라운드 재생 시도 (환경 변수 .env의 키 사용, 타임아웃 15초)
         bool result = await SpotifySdk.connectToSpotifyRemote(
-          clientId: 'b2a2b0e246b2460b83f8673cbc2e40d9',
-          redirectUrl: 'narae://spotify-callback',
+          clientId: SpotifyConfig.clientId,
+          redirectUrl: SpotifyConfig.redirectUrl,
         ).timeout(const Duration(seconds: 15));
 
         if (result) {

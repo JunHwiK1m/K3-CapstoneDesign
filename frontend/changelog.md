@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-10-01]
+### Added / Changed
+- `frontend/.env` 및 `frontend/.env.example` 파일 생성
+  - 프론트엔드 코드에 하드코딩되어 있던 스포티파이 SDK 클라이언트 ID(`SPOTIFY_CLIENT_ID`) 및 리다이렉트 URL(`SPOTIFY_REDIRECT_URL`) 환경 변수 분리
+- `frontend/.gitignore` 및 루트 `.gitignore` 수정
+  - `.env` 파일을 무시 목록에 추가하여 민감 정보 커밋 방지
+- `frontend/pubspec.yaml` 파일 수정
+  - `flutter_dotenv` 패키지 추가
+  - `assets` 항목에 `.env` 파일 등록
+- `frontend/lib/main.dart` 파일 수정
+  - 앱 시작 시 `dotenv.load(fileName: ".env")`를 호출하여 환경 변수를 안전하게 로드하도록 초기화 로직 추가
+- `frontend/lib/config.dart` 파일 수정
+  - `SpotifyConfig` 클래스를 추가하여 `.env`로부터 스포티파이 SDK 인증 키 및 리다이렉트 URL을 가져오도록 구성
+- `frontend/lib/screens/analysis_result_screen.dart` 파일 수정
+  - 하드코딩된 Spotify SDK `clientId` 및 `redirectUrl`을 `SpotifyConfig`를 통해 불러오도록 수정
+
 ## [2026-05-26]
 ### Added / Changed
 - `frontend/android/app/src/main/AndroidManifest.xml` 파일 수정
