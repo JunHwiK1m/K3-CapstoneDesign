@@ -11,7 +11,7 @@ spring:
 
 ai:
   server:
-    url: ${PROD_AI_SERVER_URL}
+    url: ${PROD_AI_SERVER_URL:http://localhost:8000}
 
 app:
   storage:
